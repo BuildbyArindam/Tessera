@@ -1,0 +1,13 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "tessera-api"
+version = "0.1.0"
+description = "FastAPI service (routes land on Day 11)."
+requires-python = ">=3.11"
+dependencies = ["tessera-core", "tessera-audit"]
+
+[tool.setuptools.packages.find]
+include = ["tessera_api*"]
