@@ -1,0 +1,15 @@
+# Day 1 stub: only postgres for now. api, worker and web are added on Days 11, 13 and 15.
+services:
+  postgres:
+    image: postgres:16
+    environment:
+      POSTGRES_USER: tessera
+      POSTGRES_PASSWORD: tessera
+      POSTGRES_DB: tessera
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+
+volumes:
+  pgdata:

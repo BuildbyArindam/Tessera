@@ -1,0 +1,17 @@
+.venv/
+__pycache__/
+*.pyc
+*.egg-info/
+.mypy_cache/
+.ruff_cache/
+.pytest_cache/
+.hypothesis/
+.coverage
+htmlcov/
+.env
+*.env.local
+node_modules/
+.next/
+data/synthetic/*.parquet
+data/fx/*.csv
+data/fx/*.parquet
