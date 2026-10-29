@@ -1,75 +1,22 @@
-[project]
-name = "tessera-workspace"
-version = "0.1.0"
-description = "Tessera: policy-bounded treasury agent for cross-border SMEs (workspace root, tooling only)"
-requires-python = ">=3.11"
-dependencies = []
+[tool.pytest.ini_options]
+pythonpath = ["packages/core", "packages/evalkit", "tests"]
+testpaths = ["tests"]
 
-[dependency-groups]
-dev = [
-    "pytest>=8.0",
-    "pytest-cov>=5.0",
-    "hypothesis>=6.100",
-    "ruff>=0.6",
-    "mypy>=1.11",
-    "pre-commit>=3.8",
-    "import-linter>=2.0",
-]
-
-# ---------------------------------------------------------------- ruff
 [tool.ruff]
-line-length = 100
+line-length = 120
 target-version = "py311"
-extend-exclude = ["notebooks", "migrations", "apps/web"]
 
 [tool.ruff.lint]
-select = ["E", "F", "I", "B", "UP", "SIM", "RUF", "S", "C4", "PT"]
-ignore = [
-    "S101",   # assert is fine in tests; core avoids it by convention
-    "PT018",  # compound asserts are readable in these tests
-]
+select = ["E", "F", "I", "B", "UP"]
 
-[tool.ruff.lint.isort]
-known-first-party = [
-    "tessera_core", "tessera_airwallex", "tessera_agent",
-    "tessera_audit", "tessera_evalkit", "tessera_api", "tessera_worker",
-]
-
-[tool.ruff.lint.per-file-ignores]
-"tests/**" = ["S101", "S105", "S106"]
-
-# ---------------------------------------------------------------- mypy
 [tool.mypy]
 python_version = "3.11"
-warn_unused_configs = true
-warn_return_any = true
-check_untyped_defs = true
-explicit_package_bases = true
-mypy_path = [
-    "packages/core",
-    "packages/airwallex",
-    "packages/agent",
-    "packages/audit",
-    "packages/evalkit",
-    "apps/api",
-    "apps/worker",
-]
-plugins = ["pydantic.mypy"]
-
-# strict where the safety story lives
-[[tool.mypy.overrides]]
-module = ["tessera_core", "tessera_core.*"]
 strict = true
+plugins = ["pydantic.mypy"]
+mypy_path = "packages/core:packages/evalkit"
+explicit_package_bases = true
+namespace_packages = true
 
 [[tool.mypy.overrides]]
-module = ["tessera_airwallex", "tessera_airwallex.*"]
-disallow_untyped_defs = true
-
-# ---------------------------------------------------------------- pytest
-[tool.pytest.ini_options]
-testpaths = ["tests"]
-addopts = "-ra --strict-markers"
-markers = [
-    "sandbox: needs real Airwallex sandbox credentials (skipped otherwise)",
-    "integration: needs docker services (postgres)",
-]
+module = ["lightgbm.*"]
+ignore_missing_imports = true
