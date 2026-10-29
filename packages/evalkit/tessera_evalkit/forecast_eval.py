@@ -1,19 +1,16 @@
-<<<<<<< HEAD
 """Summarise backtest results and write the baseline results table.
 
     python -m tessera_evalkit.forecast_eval --data data/synthetic --out docs/baseline_results.csv
-=======
-"""Rolling-origin evaluation of the LightGBM + conformal forecaster against baselines.
+
+Rolling-origin evaluation of the LightGBM + conformal forecaster against baselines.
 
 Each fold: test window = a contiguous block of origins at the end of history; the model is
 refit on data whose labels are realised before the calibration window (expanding window).
 Calibration rows never overlap train or test rows (see tessera_core.forecast.splits).
->>>>>>> b5b2d1a (Day 4: LightGBM direct forecaster with split conformal intervals)
 """
 
 from __future__ import annotations
 
-<<<<<<< HEAD
 import argparse
 from pathlib import Path
 
@@ -65,7 +62,7 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
-=======
+
 from collections.abc import Callable, Mapping, Sequence
 
 import numpy as np
@@ -157,4 +154,3 @@ def summarise(rows: pd.DataFrame, baseline_names: Sequence[str], coverage_target
             )
             out.append(rec)
     return pd.DataFrame(out)
->>>>>>> b5b2d1a (Day 4: LightGBM direct forecaster with split conformal intervals)
