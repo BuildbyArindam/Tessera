@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 """Forecasting: target series, leakage-safe features, baselines, backtest."""
 
 from tessera_core.forecast.backtest import iter_folds, rolling_origin_backtest
@@ -33,5 +32,4 @@ __all__ = [
     "rolling_test_windows",
     "save",
     "target_col",
->>>>>>> b5b2d1a (Day 4: LightGBM direct forecaster with split conformal intervals)
 ]
