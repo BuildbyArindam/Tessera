@@ -1,0 +1,5 @@
+# Emergency stop. Required in every ruleset. Whether it is engaged is runtime state
+# (PolicyContext.kill_switch_engaged), so this file has no parameters.
+id: kill_switch
+type: kill_switch
+params: {}

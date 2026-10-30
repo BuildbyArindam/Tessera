@@ -8,7 +8,7 @@ setup:  ## create venv and install all packages in editable mode
 	uv pip install --python $(BIN)/python \
 		-e packages/core -e packages/airwallex -e packages/agent \
 		-e packages/audit -e packages/evalkit -e apps/api -e apps/worker \
-		pytest pytest-cov hypothesis ruff mypy pre-commit import-linter
+		pytest pytest-cov hypothesis ruff mypy pre-commit import-linter types-PyYAML
 
 up:  ## start postgres, api, worker, web (services land on Day 11+)
 	docker compose up -d

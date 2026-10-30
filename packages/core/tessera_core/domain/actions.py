@@ -37,9 +37,16 @@ class Verdict(StrEnum):
 
 
 class PolicyDecision(DomainModel):
+    """The engine's answer. `rule_ids` lists the rules that produced a non-PASS result.
+
+    `ruleset_hash` pins the decision to the exact rules in force. It is optional only so that
+    hand-built decisions in tests stay valid; `policy.evaluate` always sets it.
+    """
+
     verdict: Verdict
     reasons: tuple[str, ...] = ()
     rule_ids: tuple[str, ...] = ()
+    ruleset_hash: str | None = None
 
     @model_validator(mode="after")
     def _non_approve_needs_reason(self) -> "PolicyDecision":

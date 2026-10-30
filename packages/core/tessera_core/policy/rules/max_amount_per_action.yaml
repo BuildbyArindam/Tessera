@@ -1,0 +1,13 @@
+# Hard ceiling per single action, in the currency leaving the account.
+# Quote every amount: an unquoted 5000.5 is a float and is rejected on purpose.
+# Illustrative defaults for the synthetic demo businesses; tune per customer.
+id: max_amount_per_action
+type: max_amount_per_action
+params:
+  max_amount:
+    USD: "5000.00"
+    EUR: "5000.00"
+    GBP: "4000.00"
+    INR: "400000.00"
+    SGD: "6000.00"
+    AUD: "7000.00"
