@@ -1,0 +1,27 @@
+{
+  "as_of": "2026-06-30",
+  "fx_source": "synthetic",
+  "generator_version": "0.1.0",
+  "months": 18,
+  "note": "ground_truth.parquet holds latent labels for evaluation only; never use as features.",
+  "rows": {
+    "businesses": 12,
+    "counterparties": 104,
+    "customers": 152,
+    "ground_truth": 2723,
+    "invoices": 2723,
+    "outflows": 1915,
+    "payments": 2381
+  },
+  "seed": 7,
+  "sha256": {
+    "businesses": "e013d21a1b9b69d44a2af46b812d41bc6c159b53a10e45796d0b822b0afeab6d",
+    "counterparties": "26fa0bbffe10389f03cdd79b8ebdaec52536bb859fc652110986210b75cffc7a",
+    "customers": "8e5479bef9a8e8d6da43e27fe706b716e34d7245d4e51446590383dcf40b9a92",
+    "ground_truth": "89e71cbe56748f2035ed92566bea1ddaefd13fff1b4a3b5e934099af7054af95",
+    "invoices": "cd81b12e025891c4635f18ec1fbb08e9e131dd175b2eee26255503f788896356",
+    "outflows": "a029eb5e24f49a435148ad051b7beb0a9169e7e8ffd801d300b97dc140c532b9",
+    "payments": "474cc5b89a3f871612cb7e2389e6d435c7181a15e11f0a6c406a00615ea711f5"
+  },
+  "start": "2025-01-01"
+}

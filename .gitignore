@@ -1,4 +1,8 @@
-data/
 __pycache__/
+*.pyc
 .pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.venv/
+artifacts/
 *.egg-info/
