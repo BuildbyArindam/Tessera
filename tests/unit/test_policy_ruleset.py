@@ -32,9 +32,19 @@ def texts(**overrides: str) -> dict[str, str]:
 
 def test_shipped_rules_load_and_register() -> None:
     rs = load_ruleset(DEFAULT_RULES_DIR)
-    assert [r.rule_id for r in rs.rules] == ["kill_switch", "max_amount_per_action"]
+    assert [r.rule_id for r in rs.rules] == [
+        "beneficiary_allowlist",
+        "card_limit_cap",
+        "currency_concentration_cap",
+        "daily_cumulative_cap",
+        "forecast_confidence_gate",
+        "kill_switch",
+        "max_amount_per_action",
+        "quote_slippage_guard",
+        "velocity_limit",
+    ]
     assert len(rs.hash) == 64 and int(rs.hash, 16) >= 0
-    assert {"kill_switch", "max_amount_per_action"} <= set(registered_types())
+    assert {r.rule_id for r in rs.rules} <= set(registered_types())
 
 
 # ---- (f) the hash tracks meaning, not formatting ------------------------------------------

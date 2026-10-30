@@ -1,0 +1,5 @@
+# At most this many approved money-moving actions in any rolling hour.
+id: velocity_limit
+type: velocity_limit
+params:
+  max_actions_per_hour: 10

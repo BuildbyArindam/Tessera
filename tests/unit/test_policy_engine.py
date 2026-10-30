@@ -1,12 +1,12 @@
 """Day 6: engine behaviour. Maps to the Day 6 verification points (a)-(e)."""
 
 import pytest
-from policy_helpers import make_context, make_proposal, ruleset_with
+from policy_helpers import day6_ruleset, make_context, make_proposal, ruleset_with
 from tessera_core.domain import ActionType, Verdict
-from tessera_core.policy import POLICY_ERROR, evaluate, load_ruleset
+from tessera_core.policy import POLICY_ERROR, evaluate
 from tessera_core.policy.engine import UNKNOWN_RULESET_HASH
 
-RULESET = load_ruleset()
+RULESET = day6_ruleset()
 
 
 # ---- (a) kill switch ----------------------------------------------------------------------

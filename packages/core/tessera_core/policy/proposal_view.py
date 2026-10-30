@@ -9,6 +9,7 @@ LEAVES the account: the sell side of a CONVERT, the payout of a PAY_SUPPLIER, th
 TOPUP_CARD. Day 7 rules refine per-action fields.
 """
 
+import re
 from decimal import Decimal, InvalidOperation
 
 from pydantic import ValidationError
@@ -22,8 +23,17 @@ MONEY_MOVING_ACTIONS: frozenset[ActionType] = frozenset(
 )
 
 
+# What an id (beneficiary, vendor) may look like. Anything else is rejected before it can be looked
+# up or echoed into a reason, because params are untrusted.
+_ID_PATTERN = re.compile(r"[A-Za-z0-9][A-Za-z0-9_-]{0,63}")
+# What an amount string may look like: ASCII digits with an optional fraction. This refuses forms
+# Python's Decimal would accept but other parsers read differently: whitespace, "+", "1_000",
+# "1e3", and non-ASCII digits such as fullwidth "１００".
+_AMOUNT_PATTERN = re.compile(r"[0-9]{1,17}(\.[0-9]+)?")
+
+
 class ProposalFormatError(ValueError):
-    """The proposal's params cannot be read as a valid amount."""
+    """The proposal's params cannot be read as a valid amount, id or currency."""
 
 
 def proposed_amount(proposal: Proposal) -> Money | None:
@@ -39,6 +49,9 @@ def proposed_amount(proposal: Proposal) -> Money | None:
         raise ProposalFormatError("amount must be a string or integer, never a float, bool or nested value")
     if not isinstance(raw_currency, str):
         raise ProposalFormatError("currency must be a string")
+
+    if isinstance(raw_amount, str) and _AMOUNT_PATTERN.fullmatch(raw_amount) is None:
+        raise ProposalFormatError("amount must be plain ASCII digits with an optional fraction")
 
     try:
         exact = Decimal(raw_amount)
@@ -56,3 +69,22 @@ def proposed_amount(proposal: Proposal) -> Money | None:
     if not money.is_positive():
         raise ProposalFormatError("amount must be strictly positive")
     return money
+
+
+def proposal_id(proposal: Proposal, key: str) -> str:
+    """An id such as `beneficiary_id` or `vendor_id`: 1-64 ASCII letters, digits, '_' or '-'."""
+    raw = proposal.params.get(key)
+    if not isinstance(raw, str) or _ID_PATTERN.fullmatch(raw) is None:
+        raise ProposalFormatError(f"{key} is required and must be 1-64 letters, digits, '_' or '-'")
+    return raw
+
+
+def buy_currency(proposal: Proposal) -> Currency:
+    """The currency a CONVERT buys (`to_currency`)."""
+    raw = proposal.params.get("to_currency")
+    if not isinstance(raw, str):
+        raise ProposalFormatError("to_currency is required and must be a currency code")
+    try:
+        return Currency(raw)
+    except ValueError:
+        raise ProposalFormatError("to_currency is not a supported currency") from None

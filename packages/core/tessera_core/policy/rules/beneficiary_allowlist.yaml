@@ -1,0 +1,6 @@
+# Payouts go only to approved beneficiaries. Unknown beneficiary: BLOCK.
+# A beneficiary added less than this many hours ago: ESCALATE to a human.
+id: beneficiary_allowlist
+type: beneficiary_allowlist
+params:
+  new_beneficiary_cooldown_hours: 24

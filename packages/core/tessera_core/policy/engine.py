@@ -43,8 +43,14 @@ def _run(proposal: Proposal, context: PolicyContext, ruleset: Ruleset) -> Policy
 
     errors: list[tuple[str, str]] = []
     results: list[RuleResult] = []
-    for rule in ruleset.rules:
-        missing = [name for name in rule.required_context if getattr(context, name, None) is None]
+    # Sorted here as well as at build time, so a hand-assembled Ruleset cannot make order matter.
+    for rule in sorted(ruleset.rules, key=lambda r: r.rule_id):
+        try:
+            needed = rule.required_context_for(proposal)
+            missing = [name for name in needed if getattr(context, name, None) is None]
+        except Exception as exc:
+            errors.append((rule.rule_id, f"context check raised {type(exc).__name__}"))
+            continue
         if missing:
             errors.append((rule.rule_id, f"missing context: {', '.join(missing)}"))
             continue

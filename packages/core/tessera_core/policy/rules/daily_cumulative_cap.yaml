@@ -1,0 +1,13 @@
+# Total approved value per day, per currency, across all money-moving actions.
+# Must be at least the per-action cap or the per-action cap can never be used in full.
+# Quote every amount. Illustrative defaults for the synthetic demo businesses.
+id: daily_cumulative_cap
+type: daily_cumulative_cap
+params:
+  daily_cap:
+    USD: "15000.00"
+    EUR: "15000.00"
+    GBP: "12000.00"
+    INR: "1200000.00"
+    SGD: "18000.00"
+    AUD: "21000.00"

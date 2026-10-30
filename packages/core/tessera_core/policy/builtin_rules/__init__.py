@@ -1,5 +1,25 @@
-"""Importing this package registers the built-in rule types. Day 7 adds the rest here."""
+"""Importing this package registers the built-in rule types."""
 
-from tessera_core.policy.builtin_rules import kill_switch, max_amount
+from tessera_core.policy.builtin_rules import (
+    beneficiary_allowlist,
+    card_limit_cap,
+    currency_concentration_cap,
+    daily_cumulative_cap,
+    forecast_confidence_gate,
+    kill_switch,
+    max_amount,
+    quote_slippage_guard,
+    velocity_limit,
+)
 
-__all__ = ["kill_switch", "max_amount"]
+__all__ = [
+    "beneficiary_allowlist",
+    "card_limit_cap",
+    "currency_concentration_cap",
+    "daily_cumulative_cap",
+    "forecast_confidence_gate",
+    "kill_switch",
+    "max_amount",
+    "quote_slippage_guard",
+    "velocity_limit",
+]

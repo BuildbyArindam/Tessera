@@ -8,9 +8,9 @@ caller assembles a snapshot, so a decision can be replayed from the audit log.
 
 from decimal import Decimal
 from enum import IntEnum
-from typing import Annotated
+from typing import Annotated, TypeVar
 
-from pydantic import Field, StrictBool, field_validator
+from pydantic import AwareDatetime, Field, StrictBool, field_validator
 
 from tessera_core.domain.base import DomainModel
 from tessera_core.domain.currency import Currency
@@ -18,6 +18,20 @@ from tessera_core.domain.money import Money
 
 _PAIR_PATTERN = r"^[A-Z]{3}/[A-Z]{3}$"
 PairKey = Annotated[str, Field(pattern=_PAIR_PATTERN)]
+
+
+T = TypeVar("T")
+
+
+class MissingContextError(LookupError):
+    """A rule reached for a context field the caller did not supply. The engine turns this into
+    BLOCK / policy_error, so a rule never has to guess a default for missing data."""
+
+
+def require(value: T | None, name: str) -> T:
+    if value is None:
+        raise MissingContextError(name)
+    return value
 
 
 class AutonomyLevel(IntEnum):
@@ -48,6 +62,16 @@ class PolicyContext(DomainModel):
     autonomy_level: AutonomyLevel | None = None
     # Runtime state, not rule config: an operator flips it without redeploying rules.
     kill_switch_engaged: StrictBool | None = None
+    # The decision time. Rules never read a clock; the caller supplies it, so a decision replays.
+    now: AwareDatetime | None = None
+    # Beneficiary id -> when it was added. An id on the allowlist but absent here has unknown age.
+    beneficiary_added_at: dict[str, AwareDatetime] | None = None
+    # When each recently approved money-moving action was approved (any age; rules window it).
+    recent_approval_times: tuple[AwareDatetime, ...] | None = None
+    # "SELL/BUY" -> the rate of the executable quote, same convention as fx_reference_rate.
+    fx_quote_rate: dict[PairKey, Decimal] | None = None
+    # Vendor id -> value already loaded onto that vendor's card this calendar month.
+    card_loaded_this_month: dict[str, Money] | None = None
 
     @field_validator("balances", "spend_today")
     @classmethod
@@ -58,7 +82,22 @@ class PolicyContext(DomainModel):
                     raise ValueError(f"entry keyed {currency.value} holds {money.currency.value}")
         return value
 
-    @field_validator("fx_reference_rate")
+    @field_validator("spend_today")
+    @classmethod
+    def _spend_not_negative(cls, value: dict[Currency, Money] | None) -> dict[Currency, Money] | None:
+        # A negative total would lower what a cap counts and let a larger action through.
+        if value is not None and any(money.is_negative() for money in value.values()):
+            raise ValueError("spend_today must not contain negative amounts")
+        return value
+
+    @field_validator("card_loaded_this_month")
+    @classmethod
+    def _card_loads_not_negative(cls, value: dict[str, Money] | None) -> dict[str, Money] | None:
+        if value is not None and any(money.is_negative() for money in value.values()):
+            raise ValueError("card_loaded_this_month must not contain negative amounts")
+        return value
+
+    @field_validator("fx_reference_rate", "fx_quote_rate")
     @classmethod
     def _rates_positive(cls, value: dict[str, Decimal] | None) -> dict[str, Decimal] | None:
         if value is not None:

@@ -1,0 +1,6 @@
+# Block a conversion whose executable quote differs from the reference rate by more than
+# this percent, in either direction. Quote the number: "0.50" means half a percent.
+id: quote_slippage_guard
+type: quote_slippage_guard
+params:
+  max_slippage_percent: "0.50"
