@@ -1,0 +1,18 @@
+{
+  "source": "synthetic",
+  "requested_mode": "auto",
+  "seed": 7,
+  "window": [
+    "2023-12-25",
+    "2026-06-30"
+  ],
+  "raw_file": null,
+  "pairs": [
+    "EURUSD",
+    "EURGBP",
+    "EURINR",
+    "EURSGD",
+    "EURAUD"
+  ],
+  "note": "SYNTHETIC: correlated GBM with 3-state volatility regimes; not real market data."
+}
