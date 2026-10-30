@@ -52,6 +52,15 @@ class Rule(ABC, Generic[ConfigT]):
         self.rule_id = rule_id
         self.config = config
 
+    def required_context_for(self, proposal: Proposal) -> tuple[str, ...]:
+        """Context fields needed to judge THIS proposal; the engine blocks if any is None.
+
+        Defaults to `required_context`. A rule that only applies to some action types overrides
+        this to ask for nothing when it does not apply, so a HOLD is not blocked for lacking,
+        say, an FX quote. For the actions a rule does apply to it must still list everything.
+        """
+        return self.required_context
+
     def result(self, outcome: RuleOutcome, reason: str = "") -> RuleResult:
         return RuleResult(rule_id=self.rule_id, outcome=outcome, reason=reason)
 

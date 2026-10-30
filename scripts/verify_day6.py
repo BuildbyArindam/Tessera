@@ -10,7 +10,7 @@ from datetime import UTC, datetime
 from pathlib import Path
 
 from tessera_core.domain import ActionType, Proposal, Verdict
-from tessera_core.policy import POLICY_ERROR, PolicyContext, evaluate, load_ruleset, ruleset_from_yaml_texts
+from tessera_core.policy import POLICY_ERROR, PolicyContext, evaluate, ruleset_from_yaml_texts
 
 POLICY_DIR = Path(__file__).resolve().parents[1] / "packages/core/tessera_core/policy"
 FORBIDDEN_IMPORTS = {
@@ -41,7 +41,10 @@ def ctx(kill: bool | None = False) -> PolicyContext:
     return PolicyContext(kill_switch_engaged=kill)
 
 
-rs = load_ruleset()
+# Day 6 verifies the engine core with the two Day 6 rules only; the full shipped ruleset (Day 7 added
+# seven more, which need much more context) is covered by scripts/verify_day7.py.
+DAY6_FILES = ("kill_switch.yaml", "max_amount_per_action.yaml")
+rs = ruleset_from_yaml_texts({name: (POLICY_DIR / "rules" / name).read_text() for name in DAY6_FILES})
 print(f"ruleset: {[r.rule_id for r in rs.rules]}  hash={rs.hash}\n")
 
 # (a) kill switch on => every proposal BLOCK

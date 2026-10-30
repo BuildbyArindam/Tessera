@@ -1,10 +1,14 @@
 """Shared builders and test-only rule types for the policy tests."""
 
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
+from decimal import Decimal
 from typing import Any
 
-from tessera_core.domain import ActionType, Proposal
+from tessera_core.domain import ActionType, Money, Proposal
+from tessera_core.domain.currency import Currency
 from tessera_core.policy import (
+    DEFAULT_RULES_DIR,
+    ForecastConfidence,
     PolicyContext,
     Rule,
     RuleConfig,
@@ -14,6 +18,7 @@ from tessera_core.policy import (
     RuleSpec,
     build_ruleset,
     register_rule,
+    ruleset_from_yaml_texts,
 )
 
 NOW = datetime(2026, 10, 30, 12, 0, tzinfo=UTC)
@@ -99,3 +104,54 @@ def ruleset_with(*extra_types: str) -> Ruleset:
     specs = [RuleSpec(id="kill_switch", type="kill_switch")]
     specs += [RuleSpec(id=t, type=t) for t in extra_types]
     return build_ruleset(specs)
+
+
+def day6_ruleset() -> Ruleset:
+    """The Day 6 shipped rules only (kill switch + per-action cap), for the Day 6 engine tests."""
+    names = ("kill_switch.yaml", "max_amount_per_action.yaml")
+    return ruleset_from_yaml_texts({n: (DEFAULT_RULES_DIR / n).read_text(encoding="utf-8") for n in names})
+
+
+def usd(amount: str) -> Money:
+    return Money(amount=amount, currency=Currency.USD)
+
+
+def full_context(**overrides: Any) -> PolicyContext:
+    """A context with every Day 7 field supplied, in which a small ordinary action is clean.
+
+    Pass `field=None` to remove a field, or another value to replace it.
+    """
+    values: dict[str, Any] = {
+        "kill_switch_engaged": False,
+        "now": NOW,
+        "balances": {Currency.USD: usd("10000.00"), Currency.EUR: Money(amount="8000.00", currency=Currency.EUR)},
+        "spend_today": {},
+        "beneficiary_allowlist": frozenset({"sup_old", "sup_new"}),
+        "beneficiary_added_at": {"sup_old": NOW - timedelta(days=30), "sup_new": NOW - timedelta(hours=2)},
+        "recent_approval_times": (),
+        "fx_reference_rate": {"USD/EUR": Decimal("0.9200")},
+        "fx_quote_rate": {"USD/EUR": Decimal("0.9200")},
+        "forecast_confidence": {
+            Currency.USD: ForecastConfidence(relative_width=Decimal("0.2")),
+            Currency.EUR: ForecastConfidence(relative_width=Decimal("0.2")),
+        },
+        "card_loaded_this_month": {},
+    }
+    values.update(overrides)
+    return PolicyContext(**values)
+
+
+def clean_proposals() -> dict[str, Proposal]:
+    """One small proposal per money-moving action that every shipped rule passes."""
+    return {
+        "convert": make_proposal(ActionType.CONVERT, "1000.00", "USD", to_currency="EUR"),
+        "pay": make_proposal(ActionType.PAY_SUPPLIER, "500.00", "USD", beneficiary_id="sup_old"),
+        "card": make_proposal(ActionType.TOPUP_CARD, "100.00", "USD", vendor_id="workspace_suite"),
+    }
+
+
+def only(rule_file: str, yaml_text: str | None = None) -> Ruleset:
+    """kill_switch plus one shipped rule file (or the same file with replacement text)."""
+    text = yaml_text if yaml_text is not None else (DEFAULT_RULES_DIR / rule_file).read_text(encoding="utf-8")
+    kill = (DEFAULT_RULES_DIR / "kill_switch.yaml").read_text(encoding="utf-8")
+    return ruleset_from_yaml_texts({"kill_switch.yaml": kill, rule_file: text})

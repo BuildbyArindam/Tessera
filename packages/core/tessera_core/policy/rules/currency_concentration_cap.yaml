@@ -1,0 +1,6 @@
+# One conversion may spend at most this percent of the source-currency balance.
+# Quote the number: "40.00" means forty percent.
+id: currency_concentration_cap
+type: currency_concentration_cap
+params:
+  max_percent_of_balance: "40.00"

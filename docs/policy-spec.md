@@ -1,7 +1,7 @@
 # Policy engine specification
 
-Status: Day 6 (core engine and two rules). Day 7 adds the remaining rules; Day 8 adds a
-simulation-based rule; Day 14 adds the autonomy gate.
+Status: Day 7 (core engine and nine rules, property-tested). Day 8 adds a simulation-based rule;
+Day 14 adds the autonomy gate.
 
 ## What it is
 
@@ -27,8 +27,10 @@ decision = evaluate(proposal, context, ruleset)   # -> PolicyDecision
 - **proposal**: what is being asked (`action_type`, `params`, `rationale`, `confidence`). The
   `rationale` and any other free text is never read by a rule and never copied into a reason.
 - **context** (`PolicyContext`): a read-only snapshot of the world, assembled by the caller:
-  balances, spend so far today, beneficiary allowlist, forecast confidence per currency, FX
-  reference rates, current autonomy level, and whether the kill switch is engaged.
+  balances, spend so far today, the beneficiary allowlist and when each beneficiary was added,
+  forecast confidence per currency, FX reference rates and the executable quote's rate, recent
+  approval times, card value loaded this month, the decision time (`now`), the autonomy level, and
+  whether the kill switch is engaged. No rule reads a clock: `now` comes from the caller.
 - **ruleset**: the validated rules, loaded from YAML.
 - **decision**: `verdict`, `reasons` (human-readable), `rule_ids` (which rules objected), and
   `ruleset_hash` (which exact rules were in force).
@@ -53,12 +55,34 @@ fixed string `policy_error`, followed by which rule had the problem. This happen
 | Situation | Result |
 | --- | --- |
 | A rule raises an exception | `BLOCK`, `policy_error`; only the exception *type* is reported |
-| A rule needs a context field the caller left out (`None`) | `BLOCK`, `policy_error`; the rule is not run |
+| A rule needs a context field the caller left out (`None`) *for this action* | `BLOCK`, `policy_error`; the rule is not run |
 | A rule returns something that is not a valid result for itself | `BLOCK`, `policy_error` |
 | The proposal, context or ruleset is not the expected type | `BLOCK`, `policy_error` |
 | Anything unexpected inside the engine itself | `BLOCK`, `policy_error` |
 
 Other rules still run, so one broken rule does not hide a second problem.
+
+**Missing context is action-aware (Day 7).** A rule declares what it needs *for the proposal in
+front of it* (`required_context_for`). A `HOLD` or `FLAG_INVOICE` therefore does not fail for lack
+of an FX quote, but a `CONVERT` without one does. The one deliberate exception is the forecast
+confidence gate, where missing data is itself a reason to ask a human (`ESCALATE`, not an error).
+
+## Proposal fields the rules read
+
+`params` is loose JSON from the planner, so each rule reads it strictly and blocks anything
+unreadable. Amounts are a string of ASCII digits with an optional fraction (`"250.50"`) or an
+integer: not a float, boolean, list, `"1e3"`, `"1_000"`, `" 5"`, `"+5"`, a full-width digit, or
+more than two decimal places. Ids are 1 to 64 ASCII letters, digits, `_` or `-`.
+
+| Action | Required params | Notes |
+| --- | --- | --- |
+| `CONVERT` | `amount`, `currency`, `to_currency` | `amount` is the sell side; `to_currency` must differ |
+| `PAY_SUPPLIER` | `amount`, `currency`, `beneficiary_id` | the id is looked up, never trusted |
+| `TOPUP_CARD` | `amount`, `currency`, `vendor_id` | |
+| `HOLD`, `FLAG_INVOICE` | none | move no money; only the kill switch can stop them |
+
+Rates are never taken from a proposal: the reference rate and the executable quote come from the
+context, so the planner cannot name the rate it is judged against.
 
 ## Rules in force today
 
@@ -112,6 +136,42 @@ params:
 | PAY_SUPPLIER 10 in a currency with no cap | `BLOCK` |
 | any proposal, kill switch engaged | `BLOCK` |
 
+### The seven Day 7 rules
+
+All amounts and percentages in YAML are quoted strings (`"15000.00"`); an unquoted `15000.5` is a
+float and is refused at load time. Equal to a limit passes everywhere; one cent (or one tick) over
+does not. Every rule below ignores the actions it does not apply to.
+
+| Rule | Applies to | Parameters (default) | Verdict when it objects |
+| --- | --- | --- | --- |
+| `daily_cumulative_cap` | CONVERT, PAY_SUPPLIER, TOPUP_CARD | `daily_cap`: per-currency total (USD `"15000.00"`) | `BLOCK` if today's approved spend + this amount > cap, or no cap for the currency |
+| `beneficiary_allowlist` | PAY_SUPPLIER | `new_beneficiary_cooldown_hours` (24) | `BLOCK` if not on the allowlist or `beneficiary_id` malformed; `ESCALATE` if added < 24h ago, added time unknown, or added in the future |
+| `currency_concentration_cap` | CONVERT | `max_percent_of_balance` (`"40.00"`) | `BLOCK` if amount > that percent of the source balance (no balance = nothing to convert) |
+| `forecast_confidence_gate` | CONVERT, PAY_SUPPLIER, TOPUP_CARD | `max_relative_width` (`"0.5000"`) | `ESCALATE` if interval width / point estimate exceeds it, **or if confidence data is missing** |
+| `quote_slippage_guard` | CONVERT | `max_slippage_percent` (`"0.50"`) | `BLOCK` if the quote differs from the reference rate by more than that, in either direction; also if either rate is missing |
+| `velocity_limit` | CONVERT, PAY_SUPPLIER, TOPUP_CARD | `max_actions_per_hour` (10) | `BLOCK` once that many actions were approved in the rolling hour before `now` |
+| `card_limit_cap` | TOPUP_CARD | `vendors`: per vendor `currency`, `per_top_up_max`, `per_month_max` | `BLOCK` if the vendor is unknown, the currency differs, or either ceiling would be exceeded |
+
+Worked examples with the shipped defaults (USD, balance 10,000.00 unless stated):
+
+| Proposal and context | Verdict | Why |
+| --- | --- | --- |
+| CONVERT 1,000 USD to EUR, clean context | `APPROVE` | all rules pass |
+| CONVERT 4,000.01 USD | `BLOCK` | over 40% of the balance |
+| PAY_SUPPLIER 500 USD to a beneficiary not on the list | `BLOCK` | `beneficiary_allowlist` |
+| PAY_SUPPLIER 500 USD to a beneficiary added 2 hours ago | `ESCALATE` | inside the 24h cooldown |
+| Fourth 5,000.00 USD conversion in a day (3 already approved) | `BLOCK` | 15,000.00 daily cap |
+| CONVERT with quote 0.9247 against reference 0.9200 | `BLOCK` | 0.51% > 0.50% |
+| Any money action when forecast confidence is missing | `ESCALATE` | cannot say how sure the forecast is |
+| 10 actions approved in the last hour, then another | `BLOCK` | velocity limit |
+| TOPUP_CARD 200.01 USD for `workspace_suite` | `BLOCK` | 200.00 per-top-up ceiling |
+| TOPUP_CARD 200 USD when 450 already loaded this month | `BLOCK` | 600.00 monthly ceiling |
+
+The caller's duties (the engine is pure): `spend_today` must include approved-but-not-yet-executed
+actions, `recent_approval_times` must list recent approvals, `card_loaded_this_month` must use the
+same calendar-month boundary as the card ceilings, and a `CONVERT` needs an executable quote
+fetched **before** asking for a decision.
+
 ## Configuration
 
 One YAML file per rule in `policy/rules/`. The file name must equal the rule `id`.
@@ -152,13 +212,35 @@ to the exact rules that produced it.
 3. Decorate with `@register_rule` and import the module in `builtin_rules/__init__.py`.
 4. Add a YAML file and tests, including a failure and a boundary case.
 
-## Known limits at Day 6
+## Property tests (Day 7)
 
-- Only two rules exist. **This ruleset is not yet enough to protect a payout:** there is no
-  beneficiary allowlist, daily cumulative cap, velocity limit or confidence gate until Day 7.
-  Do not wire the engine to execution before then.
-- The money convention for `params` (`amount` and `currency` meaning value leaving the account) is
-  a Day 6 assumption. Day 7 rules refine the per-action fields.
-- The per-action cap does not look at what was already spent today; that is the daily cumulative
-  cap (Day 7). Splitting a large payment into several capped ones is not yet stopped.
-- `PolicyContext` fields beyond `kill_switch_engaged` are defined but unused until Day 7.
+`tests/unit/test_policy_properties.py` uses Hypothesis (500 examples per property) to check four
+invariants against the shipped ruleset, with generated proposals (valid ones, and ones with one to
+three injected faults: hostile values, deleted fields, stray keys) and generated contexts:
+
+1. **Fail closed.** A proposal an independent oracle judges malformed is `BLOCK`, never anything
+   else; any non-proposal, non-context or non-ruleset object yields `BLOCK` / `policy_error`.
+2. **Monotonic.** Raising an amount never makes the verdict more permissive; a `BLOCK` stays `BLOCK`.
+3. **Order independent.** Shuffling the rules (even in a hand-built `Ruleset`) gives an identical
+   decision, and shuffling the specs gives an identical ruleset hash.
+4. **A BLOCK is never outvoted.** If any single rule would `BLOCK` on its own, the engine `BLOCK`s;
+   more exactly, the verdict equals the strictest verdict any member gives alone. Test-only rules that
+   raise or escalate are mixed in.
+
+Monotonicity is a property of the shipped rules (each limit only gets tighter as an amount grows,
+and the other checks ignore the amount). A future rule that is not monotonic in the amount, such as
+"escalate small amounts, approve large ones", would fail it and must be reconsidered.
+
+## Known limits at Day 7
+
+- The ruleset still has no simulation-based check (Day 8) and no autonomy gate (Day 14).
+- `daily_cumulative_cap`, `velocity_limit` and `card_limit_cap` trust the caller's counters
+  (`spend_today`, `recent_approval_times`, `card_loaded_this_month`). Two proposals decided at the same
+  moment from the same snapshot could both pass; the worker must serialise decisions or re-check at
+  execution time (Day 13).
+- Limits are single global values (and per-vendor for cards), not per business; per-customer
+  configuration comes later. Defaults are illustrative.
+- Slippage compares against a reference rate the caller supplies; if that source is wrong, the check
+  is only as good as it is.
+- Currencies are compared one at a time. There is no cross-currency total (for example, a daily cap
+  across all currencies in USD terms).

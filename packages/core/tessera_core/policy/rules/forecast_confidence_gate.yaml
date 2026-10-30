@@ -1,0 +1,6 @@
+# Escalate when the forecast interval width divided by the point estimate exceeds this ratio,
+# or when no confidence data is available. Quote the number: "0.5000" means half.
+id: forecast_confidence_gate
+type: forecast_confidence_gate
+params:
+  max_relative_width: "0.5000"

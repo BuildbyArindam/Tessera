@@ -1,0 +1,19 @@
+# Virtual card ceilings per vendor: the most one top-up may add, and the most that may be loaded
+# onto the vendor's card in a calendar month. A vendor not listed here cannot be funded.
+# Vendor ids are the SaaS vendor ids from the synthetic dataset; replace per customer.
+id: card_limit_cap
+type: card_limit_cap
+params:
+  vendors:
+    workspace_suite:
+      currency: USD
+      per_top_up_max: "200.00"
+      per_month_max: "600.00"
+    design_tool:
+      currency: USD
+      per_top_up_max: "150.00"
+      per_month_max: "450.00"
+    cloud_compute:
+      currency: USD
+      per_top_up_max: "1000.00"
+      per_month_max: "3000.00"
