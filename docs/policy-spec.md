@@ -1,6 +1,6 @@
 # Policy engine specification
 
-Status: Day 7 (core engine and nine rules, property-tested). Day 8 adds a simulation-based rule;
+Status: Day 8 (core engine and ten rules, property-tested; the tenth is simulation-based).
 Day 14 adds the autonomy gate.
 
 ## What it is
@@ -152,6 +152,19 @@ does not. Every rule below ignores the actions it does not apply to.
 | `velocity_limit` | CONVERT, PAY_SUPPLIER, TOPUP_CARD | `max_actions_per_hour` (10) | `BLOCK` once that many actions were approved in the rolling hour before `now` |
 | `card_limit_cap` | TOPUP_CARD | `vendors`: per vendor `currency`, `per_top_up_max`, `per_month_max` | `BLOCK` if the vendor is unknown, the currency differs, or either ceiling would be exceeded |
 
+### `worst_case_loss_gate` (Day 8)
+
+| Rule | Applies to | Parameters (default) | Verdict when it objects |
+| --- | --- | --- | --- |
+| `worst_case_loss_gate` | CONVERT, PAY_SUPPLIER (a simulation is required); HOLD (judged only if one is supplied) | `max_worst_case_loss`: per-currency ceiling (USD `"500.00"`) | `ESCALATE` if the simulated 5th-percentile loss is above the ceiling, **or if a CONVERT / PAY_SUPPLIER has no simulation**; `BLOCK` if the simulation belongs to another proposal, or the currency has no ceiling |
+
+The simulation arrives in the context (`context.simulation`, a `SimulationSummary` built with
+`simulate(...).summary()`), never in the proposal, so the model cannot state its own risk. The summary
+carries the proposal id, action and amount; one that does not match the proposal in front of the rule
+is `BLOCK`, so a stale report, or a small simulation for a larger action, cannot vouch for it. A loss
+equal to the ceiling passes. The loss is in the SELL currency (the one the business holds). TOPUP_CARD
+and FLAG_INVOICE always pass this rule. See "Simulation" below for what the number means.
+
 Worked examples with the shipped defaults (USD, balance 10,000.00 unless stated):
 
 | Proposal and context | Verdict | Why |
@@ -166,11 +179,35 @@ Worked examples with the shipped defaults (USD, balance 10,000.00 unless stated)
 | 10 actions approved in the last hour, then another | `BLOCK` | velocity limit |
 | TOPUP_CARD 200.01 USD for `workspace_suite` | `BLOCK` | 200.00 per-top-up ceiling |
 | TOPUP_CARD 200 USD when 450 already loaded this month | `BLOCK` | 600.00 monthly ceiling |
+| CONVERT 4,000 USD whose simulated 5th-percentile loss is 929.49 USD | `ESCALATE` | 500.00 worst-case loss ceiling |
+| CONVERT with no simulation in the context | `ESCALATE` | the downside is unknown |
 
 The caller's duties (the engine is pure): `spend_today` must include approved-but-not-yet-executed
 actions, `recent_approval_times` must list recent approvals, `card_loaded_this_month` must use the
 same calendar-month boundary as the card ceilings, and a `CONVERT` needs an executable quote
 fetched **before** asking for a decision.
+
+## Simulation (Day 8)
+
+`tessera_core.simulate.simulate(proposal, fx_history, as_of, n_paths, seed, *, due_date, config)` replays
+a proposal over block-bootstrapped FX paths and returns a `SimulationReport`. `replay(...)` runs the
+same proposal over the rates that actually happened, for backtests; it returns a `ReplayReport` that
+has no `summary()`, so it cannot reach a live decision.
+
+- **Paths.** Historical daily log returns up to `as_of` only (the series is sliced by `FxSeries.up_to`
+  before anything else). Moving blocks of 5 business days by default, drift removed by default, steps =
+  calendar days x 252/365 (the Day 5 convention). Seeded `numpy.random.Generator`: same inputs and seed,
+  identical report. Fully vectorised: 5,000 paths over a year in about 20 ms.
+- **Comparator.** CONVERT and PAY_SUPPLIER are scored against "convert on the due date" at the plain
+  mid rate, so the proposal has to earn back its own spread and fee. HOLD is scored against "convert
+  now". `saving` is proposal minus comparator in the sell currency; negative is a loss.
+- **Report.** `expected_saving`, `saving_std`, `saving_p05`, `saving_p50`, `worst_case_loss`
+  (= max(0, -p05)), `prob_beats_baseline` (P(saving > 0)), `spread_cost`, `fee_cost`.
+- **The due date is not in the proposal.** It is a keyword argument supplied by the caller from the
+  obligation being worked on. If the planner could name it, it could set it to today and make the
+  worst-case loss zero.
+- **Costs are assumptions.** Spread defaults to 50 bps (the Day 1 mock's figure) and the fee to zero.
+  They are not measured Airwallex prices.
 
 ## Configuration
 
@@ -233,7 +270,7 @@ and the other checks ignore the amount). A future rule that is not monotonic in 
 
 ## Known limits at Day 7
 
-- The ruleset still has no simulation-based check (Day 8) and no autonomy gate (Day 14).
+- The ruleset has no autonomy gate yet (Day 14).
 - `daily_cumulative_cap`, `velocity_limit` and `card_limit_cap` trust the caller's counters
   (`spend_today`, `recent_approval_times`, `card_loaded_this_month`). Two proposals decided at the same
   moment from the same snapshot could both pass; the worker must serialise decisions or re-check at

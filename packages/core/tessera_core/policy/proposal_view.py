@@ -40,7 +40,15 @@ def proposed_amount(proposal: Proposal) -> Money | None:
     """The positive amount leaving the account, or None for actions that move no money."""
     if proposal.action_type not in MONEY_MOVING_ACTIONS:
         return None
+    return read_amount(proposal)
 
+
+def read_amount(proposal: Proposal) -> Money:
+    """Strictly read `params.amount` / `params.currency`, whatever the action type.
+
+    `proposed_amount` is this plus the "does this action move money" filter. The simulator also
+    needs it for a HOLD, which moves nothing but is judged against the position it leaves unconverted.
+    """
     raw_amount = proposal.params.get("amount")
     raw_currency = proposal.params.get("currency")
     if raw_amount is None or raw_currency is None:
@@ -77,6 +85,17 @@ def proposal_id(proposal: Proposal, key: str) -> str:
     if not isinstance(raw, str) or _ID_PATTERN.fullmatch(raw) is None:
         raise ProposalFormatError(f"{key} is required and must be 1-64 letters, digits, '_' or '-'")
     return raw
+
+
+def currency_param(proposal: Proposal, key: str) -> Currency:
+    """Any currency-valued param, e.g. `from_currency`. Unknown or non-string values are rejected."""
+    raw = proposal.params.get(key)
+    if not isinstance(raw, str):
+        raise ProposalFormatError(f"{key} is required and must be a currency code")
+    try:
+        return Currency(raw)
+    except ValueError:
+        raise ProposalFormatError(f"{key} is not a supported currency") from None
 
 
 def buy_currency(proposal: Proposal) -> Currency:

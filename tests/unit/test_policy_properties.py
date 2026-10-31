@@ -11,8 +11,8 @@ from typing import Any
 
 from hypothesis import HealthCheck, given, settings
 from hypothesis import strategies as st
-from policy_helpers import DEFAULT_RULES_DIR, full_context, make_proposal
-from policy_strategies import CODES, MONEY_MOVING, contexts, proposals, well_formed
+from policy_helpers import DEFAULT_RULES_DIR, full_context, make_proposal, sim_for
+from policy_strategies import CODES, MONEY_MOVING, SIM_MODES, contexts, proposals, well_formed, with_simulation
 from tessera_core.domain import ActionType, Verdict
 from tessera_core.policy import (
     POLICY_ERROR,
@@ -98,9 +98,10 @@ def _amount(cents: int) -> str:
     currency=st.sampled_from(CODES),
     beneficiary=st.sampled_from(["sup_old", "sup_new"]),
     ctx=st.one_of(contexts(complete=True), contexts(complete=True), contexts()),  # mostly complete: APPROVE is common
+    sim=st.tuples(st.sampled_from(SIM_MODES), st.integers(0, 200_000)),
 )
 def test_raising_an_amount_never_loosens_the_verdict(
-    kind: ActionType, amounts: list[int], currency: str, beneficiary: str, ctx: PolicyContext
+    kind: ActionType, amounts: list[int], currency: str, beneficiary: str, ctx: PolicyContext, sim: tuple[str, int]
 ) -> None:
     """Along any increasing run of amounts the verdict never gets more permissive (BLOCK stays BLOCK)."""
     extra = {
@@ -108,9 +109,13 @@ def test_raising_an_amount_never_loosens_the_verdict(
         "beneficiary_id": beneficiary,
         "vendor_id": "workspace_suite",
     }
-    run = [
-        (a, evaluate(make_proposal(kind, _amount(a), currency, **extra), ctx, FULL).verdict) for a in sorted(amounts)
-    ]
+
+    # The simulation does not depend on the amount, so it stays fixed along the run.
+    def decide(a: int) -> Verdict:
+        p = make_proposal(kind, _amount(a), currency, **extra)
+        return evaluate(p, with_simulation(ctx, p, *sim), FULL).verdict
+
+    run = [(a, decide(a)) for a in sorted(amounts)]
     for (lo, before), (hi, after) in zip(run, run[1:], strict=False):
         assert RANK[after] >= RANK[before], (lo, hi, before, after)
         if before is Verdict.BLOCK:
@@ -119,10 +124,17 @@ def test_raising_an_amount_never_loosens_the_verdict(
 
 # ---- 3. order independence ----------------------------------------------------------------
 @PROP
-@given(p=proposals(), ctx=contexts(), extras=st.sets(st.sampled_from(sorted(EXTRAS))), seed=st.integers(0, 2**32))
+@given(
+    p=proposals(),
+    ctx=contexts(),
+    extras=st.sets(st.sampled_from(sorted(EXTRAS))),
+    seed=st.integers(0, 2**32),
+    sim=st.tuples(st.sampled_from(SIM_MODES), st.integers(0, 200_000)),
+)
 def test_shuffling_the_rule_list_never_changes_the_decision(
-    p: Any, ctx: PolicyContext, extras: set[str], seed: int
+    p: Any, ctx: PolicyContext, extras: set[str], seed: int, sim: tuple[str, int]
 ) -> None:
+    ctx = with_simulation(ctx, p, *sim)
     base = _ruleset(*sorted(set(SHIPPED) - {"kill_switch.yaml"} | extras))
     rules = list(base.rules)
     random.Random(seed).shuffle(rules)
@@ -136,8 +148,16 @@ def test_shuffling_the_rule_list_never_changes_the_decision(
 
 # ---- 4. a single BLOCK is never outvoted --------------------------------------------------
 @PROP
-@given(p=proposals(), ctx=contexts(), members=st.sets(st.sampled_from(OPTIONAL), min_size=1))
-def test_no_approve_when_any_single_rule_would_block(p: Any, ctx: PolicyContext, members: set[str]) -> None:
+@given(
+    p=proposals(),
+    ctx=contexts(),
+    members=st.sets(st.sampled_from(OPTIONAL), min_size=1),
+    sim=st.tuples(st.sampled_from(SIM_MODES), st.integers(0, 200_000)),
+)
+def test_no_approve_when_any_single_rule_would_block(
+    p: Any, ctx: PolicyContext, members: set[str], sim: tuple[str, int]
+) -> None:
+    ctx = with_simulation(ctx, p, *sim)
     full = evaluate(p, ctx, _ruleset(*members))
     alone = {f: evaluate(p, ctx, ISOLATED[f]).verdict for f in members}
     if any(v is Verdict.BLOCK for v in alone.values()):
@@ -155,5 +175,5 @@ def test_kill_switch_alone_is_enough_to_block(p: Any, ctx: PolicyContext) -> Non
 
 def test_the_approve_path_is_actually_reached() -> None:
     """Guard against vacuous properties: with a clean context some generated shapes must APPROVE."""
-    ok = evaluate(make_proposal(ActionType.CONVERT, "10.00", "USD", to_currency="EUR"), full_context(), FULL)
-    assert ok.verdict is Verdict.APPROVE
+    p = make_proposal(ActionType.CONVERT, "10.00", "USD", to_currency="EUR")
+    assert evaluate(p, full_context(simulation=sim_for(p)), FULL).verdict is Verdict.APPROVE

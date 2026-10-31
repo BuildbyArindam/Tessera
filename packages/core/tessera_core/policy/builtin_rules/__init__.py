@@ -10,6 +10,7 @@ from tessera_core.policy.builtin_rules import (
     max_amount,
     quote_slippage_guard,
     velocity_limit,
+    worst_case_loss_gate,
 )
 
 __all__ = [
@@ -22,4 +23,5 @@ __all__ = [
     "max_amount",
     "quote_slippage_guard",
     "velocity_limit",
+    "worst_case_loss_gate",
 ]

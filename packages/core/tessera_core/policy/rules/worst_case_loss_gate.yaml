@@ -1,0 +1,13 @@
+# Escalate to a human when the simulated 5th-percentile loss (versus the comparator, in the
+# currency the business holds) is above this ceiling. Equal to the ceiling passes.
+# A currency with no entry is BLOCKED. Quote every amount. Illustrative defaults for the demo.
+id: worst_case_loss_gate
+type: worst_case_loss_gate
+params:
+  max_worst_case_loss:
+    USD: "500.00"
+    EUR: "500.00"
+    GBP: "400.00"
+    INR: "40000.00"
+    SGD: "700.00"
+    AUD: "800.00"

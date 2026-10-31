@@ -10,6 +10,7 @@ from tessera_core.domain.entities import (
     PaymentDirection,
 )
 from tessera_core.domain.money import MAX_ABS_AMOUNT, CurrencyMismatchError, Money
+from tessera_core.domain.simulation import SimulationSummary
 
 __all__ = [
     "MAX_ABS_AMOUNT",
@@ -26,5 +27,6 @@ __all__ = [
     "PaymentDirection",
     "PolicyDecision",
     "Proposal",
+    "SimulationSummary",
     "Verdict",
 ]

@@ -4,7 +4,7 @@ from datetime import timedelta
 from decimal import Decimal
 
 import pytest
-from policy_helpers import NOW, clean_proposals, full_context, make_proposal, only, usd
+from policy_helpers import NOW, clean_proposals, full_context, make_proposal, only, sim_for, usd
 from tessera_core.domain import ActionType, Verdict
 from tessera_core.domain.currency import Currency
 from tessera_core.policy import POLICY_ERROR, ForecastConfidence, RulesetError, evaluate, load_ruleset
@@ -244,7 +244,9 @@ def test_changing_any_new_limit_changes_the_ruleset_hash() -> None:
 # ---- the whole shipped ruleset ------------------------------------------------------------
 @pytest.mark.parametrize("name", ["convert", "pay", "card"])
 def test_clean_proposals_are_approved_by_the_whole_shipped_ruleset(name: str) -> None:
-    d = evaluate(clean_proposals()[name], full_context(), load_ruleset())
+    # Day 8: the worst_case_loss_gate expects the simulator's summary for a CONVERT or PAY_SUPPLIER.
+    proposal = clean_proposals()[name]
+    d = evaluate(proposal, full_context(simulation=sim_for(proposal)), load_ruleset())
     assert d.verdict is Verdict.APPROVE, d.reasons
 
 

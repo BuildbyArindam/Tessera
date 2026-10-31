@@ -15,6 +15,7 @@ from pydantic import AwareDatetime, Field, StrictBool, field_validator
 from tessera_core.domain.base import DomainModel
 from tessera_core.domain.currency import Currency
 from tessera_core.domain.money import Money
+from tessera_core.domain.simulation import SimulationSummary
 
 _PAIR_PATTERN = r"^[A-Z]{3}/[A-Z]{3}$"
 PairKey = Annotated[str, Field(pattern=_PAIR_PATTERN)]
@@ -72,6 +73,8 @@ class PolicyContext(DomainModel):
     fx_quote_rate: dict[PairKey, Decimal] | None = None
     # Vendor id -> value already loaded onto that vendor's card this calendar month.
     card_loaded_this_month: dict[str, Money] | None = None
+    # The simulator's verdict on THIS proposal (Day 8), built by the caller from simulate(...).
+    simulation: SimulationSummary | None = None
 
     @field_validator("balances", "spend_today")
     @classmethod

@@ -20,7 +20,7 @@ from policy_helpers import NOW, full_context, make_proposal, usd  # noqa: E402
 from pydantic import ValidationError  # noqa: E402
 from tessera_core.domain import ActionType, Proposal, Verdict  # noqa: E402
 from tessera_core.domain.currency import Currency  # noqa: E402
-from tessera_core.policy import DEFAULT_RULES_DIR, evaluate, load_ruleset  # noqa: E402
+from tessera_core.policy import DEFAULT_RULES_DIR, evaluate, ruleset_from_yaml_texts  # noqa: E402
 
 failures = 0
 
@@ -31,7 +31,12 @@ def check(name: str, ok: bool, detail: str = "") -> None:
     print(f"{'PASS' if ok else 'FAIL'}  {name}" + (f"  [{detail}]" if detail else ""))
 
 
-RULESET = load_ruleset()
+# Scoped to the nine Day 7 rules. Day 8 added `worst_case_loss_gate` to the shipped directory; it is
+# verified by scripts/verify_day8.py, and leaving it in here would make check (c) fail for lack of an example.
+DAY7_FILES = {
+    p.name: p.read_text(encoding="utf-8") for p in DEFAULT_RULES_DIR.glob("*.yaml") if p.stem != "worst_case_loss_gate"
+}
+RULESET = ruleset_from_yaml_texts(DAY7_FILES)
 print(f"ruleset: {[r.rule_id for r in RULESET.rules]}\nhash: {RULESET.hash}\n")
 
 # ---- 1. the whole policy suite, Hypothesis statistics on ------------------------------------
@@ -145,6 +150,6 @@ for rule_id, params, what, verdict, reason in rows:
 d = evaluate(pay("sup_new"), full_context(), RULESET)
 check("beneficiary added 2h ago => ESCALATE", d.verdict is Verdict.ESCALATE and "beneficiary_allowlist" in d.rule_ids)
 
-print(f"\nYAML files: {sorted(p.name for p in DEFAULT_RULES_DIR.glob('*.yaml'))}")
+print(f"\nYAML files (Day 7 scope): {sorted(DAY7_FILES)}")
 print(f"\n{'ALL CHECKS PASSED' if not failures else f'{failures} CHECK(S) FAILED'}")
 sys.exit(1 if failures else 0)

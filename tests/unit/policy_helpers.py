@@ -4,7 +4,7 @@ from datetime import UTC, datetime, timedelta
 from decimal import Decimal
 from typing import Any
 
-from tessera_core.domain import ActionType, Money, Proposal
+from tessera_core.domain import ActionType, Money, Proposal, SimulationSummary
 from tessera_core.domain.currency import Currency
 from tessera_core.policy import (
     DEFAULT_RULES_DIR,
@@ -20,6 +20,7 @@ from tessera_core.policy import (
     register_rule,
     ruleset_from_yaml_texts,
 )
+from tessera_core.policy.proposal_view import ProposalFormatError, read_amount
 
 NOW = datetime(2026, 10, 30, 12, 0, tzinfo=UTC)
 
@@ -114,6 +115,30 @@ def day6_ruleset() -> Ruleset:
 
 def usd(amount: str) -> Money:
     return Money(amount=amount, currency=Currency.USD)
+
+
+def sim_for(
+    proposal: Proposal, loss: str = "0.00", saving: str = "0.00", currency: str | None = None
+) -> SimulationSummary:
+    """A simulation summary that belongs to `proposal` (same id, action and amount), in its sell currency.
+
+    The sell currency defaults to the proposal's own `currency` param when that is a real code, else
+    USD; tests that need a different one (a PAY_SUPPLIER funded from elsewhere) pass `currency`.
+    """
+    raw = currency if currency is not None else proposal.params.get("currency")
+    code = Currency(raw) if isinstance(raw, str) and raw in {c.value for c in Currency} else Currency.USD
+    try:
+        amount = read_amount(proposal)
+    except ProposalFormatError:  # a malformed proposal: any placeholder will do, the money rules BLOCK it anyway
+        amount = Money(amount="1.00", currency=code)
+    return SimulationSummary(
+        proposal_id=proposal.id,
+        action_type=proposal.action_type,
+        amount=amount,
+        worst_case_loss=Money(amount=loss, currency=code),
+        expected_saving=Money(amount=saving, currency=code),
+        n_paths=5000,
+    )
 
 
 def full_context(**overrides: Any) -> PolicyContext:

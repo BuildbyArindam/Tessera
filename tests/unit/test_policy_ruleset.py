@@ -42,6 +42,7 @@ def test_shipped_rules_load_and_register() -> None:
         "max_amount_per_action",
         "quote_slippage_guard",
         "velocity_limit",
+        "worst_case_loss_gate",
     ]
     assert len(rs.hash) == 64 and int(rs.hash, 16) >= 0
     assert {r.rule_id for r in rs.rules} <= set(registered_types())

@@ -6,7 +6,7 @@ from decimal import Decimal
 from typing import Any
 
 from hypothesis import strategies as st
-from policy_helpers import NOW
+from policy_helpers import NOW, sim_for
 from tessera_core.domain import ActionType, Money, Proposal
 from tessera_core.domain.currency import Currency
 from tessera_core.policy import ForecastConfidence, PolicyContext
@@ -140,3 +140,21 @@ def contexts(draw: st.DrawFn, complete: bool = False) -> PolicyContext:
         forecast_confidence=maybe({Currency.USD: ForecastConfidence(relative_width=width)}),
         card_loaded_this_month=maybe({"workspace_suite": _money(draw(st.integers(0, 70_000)))}),
     )
+
+
+# Day 8: the simulation summary is per proposal, so it is attached after both have been drawn.
+# "ok" stays at or under 400.00 (the tightest shipped ceiling), "over" exceeds every ceiling
+# (INR's is 40,000.00), "missing" leaves it out, "other" belongs to a different proposal.
+SIM_MODES = ["ok", "ok", "ok", "over", "missing", "other"]
+
+
+def _cents(cents: int) -> str:
+    return f"{cents // 100}.{cents % 100:02d}"
+
+
+def with_simulation(ctx: PolicyContext, proposal: Proposal, mode: str, loss_cents: int) -> PolicyContext:
+    if mode == "missing":
+        return ctx
+    loss = _cents(4_500_000 + loss_cents if mode == "over" else loss_cents % 40_001)
+    owner = proposal.model_copy(update={"id": proposal.id + "x"}) if mode == "other" else proposal
+    return ctx.model_copy(update={"simulation": sim_for(owner, loss=loss)})
