@@ -7,7 +7,14 @@ name = "tessera-agent"
 version = "0.1.0"
 description = "LLM planner. Proposes actions; can never execute them."
 requires-python = ">=3.11"
-dependencies = ["tessera-core", "pydantic>=2.7"]
+dependencies = ["tessera-core", "pydantic>=2.7", "pandas"]
+
+[project.optional-dependencies]
+# Only the real provider needs this; tests and the FakeLLM never do.
+anthropic = ["anthropic"]
 
 [tool.setuptools.packages.find]
 include = ["tessera_agent*"]
+
+[tool.setuptools.package-data]
+tessera_agent = ["prompts/*.md"]

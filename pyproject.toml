@@ -13,10 +13,10 @@ select = ["E", "F", "I", "B", "UP"]
 python_version = "3.11"
 strict = true
 plugins = ["pydantic.mypy"]
-mypy_path = "packages/core:packages/evalkit"
+mypy_path = "packages/core:packages/evalkit:packages/agent"
 explicit_package_bases = true
 namespace_packages = true
 
 [[tool.mypy.overrides]]
-module = ["lightgbm.*", "sklearn.*"]
+module = ["lightgbm.*", "sklearn.*", "pandas.*", "anthropic.*"]
 ignore_missing_imports = true

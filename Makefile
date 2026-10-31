@@ -28,7 +28,7 @@ fmt:
 	$(BIN)/ruff format .
 
 typecheck:  ## mypy strict on tessera_core, standard on the rest
-	$(BIN)/mypy packages/core/tessera_core packages/airwallex/tessera_airwallex
+	$(BIN)/mypy packages/core/tessera_core packages/airwallex/tessera_airwallex packages/agent/tessera_agent
 
 eval:  ## forecast and savings evaluation (Day 17)
 	@echo "eval: not implemented yet (Day 17)"
