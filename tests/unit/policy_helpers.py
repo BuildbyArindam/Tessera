@@ -9,6 +9,7 @@ from tessera_core.domain.currency import Currency
 from tessera_core.policy import (
     DEFAULT_RULES_DIR,
     ForecastConfidence,
+    InputScreening,
     PolicyContext,
     Rule,
     RuleConfig,
@@ -142,7 +143,7 @@ def sim_for(
 
 
 def full_context(**overrides: Any) -> PolicyContext:
-    """A context with every Day 7 field supplied, in which a small ordinary action is clean.
+    """A context with every Day 7 field and the Day 10 screening result supplied; a small ordinary action is clean.
 
     Pass `field=None` to remove a field, or another value to replace it.
     """
@@ -161,6 +162,8 @@ def full_context(**overrides: Any) -> PolicyContext:
             Currency.EUR: ForecastConfidence(relative_width=Decimal("0.2")),
         },
         "card_loaded_this_month": {},
+        "input_screening": InputScreening(),  # the untrusted-input screen ran and found nothing (Day 10)
+        "obligation_due_dates": {"obl_1": NOW.date()},  # a payment due today (Day 10)
     }
     values.update(overrides)
     return PolicyContext(**values)
@@ -170,7 +173,7 @@ def clean_proposals() -> dict[str, Proposal]:
     """One small proposal per money-moving action that every shipped rule passes."""
     return {
         "convert": make_proposal(ActionType.CONVERT, "1000.00", "USD", to_currency="EUR"),
-        "pay": make_proposal(ActionType.PAY_SUPPLIER, "500.00", "USD", beneficiary_id="sup_old"),
+        "pay": make_proposal(ActionType.PAY_SUPPLIER, "500.00", "USD", beneficiary_id="sup_old", obligation_id="obl_1"),
         "card": make_proposal(ActionType.TOPUP_CARD, "100.00", "USD", vendor_id="workspace_suite"),
     }
 

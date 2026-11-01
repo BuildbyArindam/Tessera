@@ -4,9 +4,10 @@ The worker assembles a snapshot (balances from the Airwallex port, forecasts, FX
 obligations) and hands it over; the agent package never fetches anything itself. Nothing in a snapshot
 is ever written back, and the tools only read from it.
 
-No free text enters the context today: no customer or counterparty names, no invoice notes. Only ids,
-currencies, amounts and dates. Untrusted text, once it is passed at all, goes through the Day 10 sanitiser
-and a delimited data block.
+The context JSON itself holds no free text: no customer or counterparty names, no invoice notes, only ids,
+currencies, amounts and dates. Third-party text (invoice notes, memos, names, email bodies) travels separately
+in `PlannerSnapshot.untrusted`; the planner sanitises and screens it and shows it to the model only inside one
+delimited, labelled data block (sanitize.py). Tool results never contain it.
 """
 
 from __future__ import annotations
@@ -24,6 +25,7 @@ from tessera_core.forecast import ForecastResult
 from tessera_core.risk import LateScorer
 from tessera_core.simulate import FxSeries
 
+from tessera_agent.sanitize import UntrustedText
 from tessera_agent.schemas import MAX_PROPOSALS
 
 ObligationKind = Literal["RECEIVABLE", "PAYABLE"]
@@ -55,6 +57,8 @@ class PlannerSnapshot:
     obligations: tuple[Obligation, ...]
     beneficiaries: tuple[Beneficiary, ...]
     card_vendor_ids: frozenset[str] = frozenset()
+    # Third-party text for this business: UNTRUSTED. Only the planner reads it, and only after `screen`.
+    untrusted: tuple[UntrustedText, ...] = ()
 
     def __post_init__(self) -> None:
         stray = {f.business_id for f in self.forecasts} - {self.business_id}

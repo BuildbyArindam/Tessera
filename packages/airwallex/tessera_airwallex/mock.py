@@ -17,6 +17,7 @@ from decimal import ROUND_DOWN, Decimal
 from typing import TypeVar
 
 from pydantic import BaseModel, SecretStr
+from tessera_core.domain import Balance, Currency, FxQuote, Money
 
 from tessera_airwallex.errors import (
     IdempotencyConflictError,
@@ -33,7 +34,6 @@ from tessera_airwallex.models import (
     TransferStatus,
 )
 from tessera_airwallex.port import AirwallexPort
-from tessera_core.domain import Balance, Currency, FxQuote, Money
 
 T = TypeVar("T", bound=BaseModel)
 

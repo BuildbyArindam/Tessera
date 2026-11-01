@@ -1,7 +1,6 @@
 import numpy as np
 import pandas as pd
 import pytest
-
 from tessera_core.forecast.baselines import moving_average, naive, seasonal_naive
 from tessera_core.forecast.target import last_complete_week_start, weekly_net_cashflow
 

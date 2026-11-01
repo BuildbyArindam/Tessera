@@ -4,7 +4,6 @@ because the policy engine needs them and core must not import this package."""
 from enum import StrEnum
 
 from pydantic import AwareDatetime, BaseModel, ConfigDict, Field
-
 from tessera_core.domain import Currency, Money
 
 

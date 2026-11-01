@@ -4,13 +4,11 @@ from __future__ import annotations
 
 import sys
 
-import numpy as np
 import pandas as pd
 
 sys.path[:0] = ["packages/core", "packages/evalkit", "tests"]
 
 from synth_panel import FEATURES, HORIZONS, make_panel, naive, seasonal_naive_factory  # noqa: E402
-
 from tessera_core.forecast import make_split, rolling_test_windows  # noqa: E402
 from tessera_evalkit.forecast_eval import evaluate_forecaster  # noqa: E402
 from tessera_evalkit.interval_metrics import wape  # noqa: E402

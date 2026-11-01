@@ -15,10 +15,10 @@ import argparse
 from pathlib import Path
 
 import pandas as pd
-
 from tessera_core.forecast.backtest import DEFAULT_HORIZONS, rolling_origin_backtest
 from tessera_core.forecast.baselines import BASELINES
 from tessera_core.forecast.history import History
+
 from tessera_evalkit.loading import load_history
 from tessera_evalkit.metrics import bias, mae, smape, wape
 
@@ -66,7 +66,6 @@ if __name__ == "__main__":
 from collections.abc import Callable, Mapping, Sequence
 
 import numpy as np
-import pandas as pd
 from numpy.typing import NDArray
 from tessera_core.forecast import DirectForecaster, make_split, rolling_test_windows, target_col
 

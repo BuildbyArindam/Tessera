@@ -14,9 +14,9 @@ Conventions:
 from abc import ABC, abstractmethod
 
 from pydantic import SecretStr
+from tessera_core.domain import Balance, Currency, FxQuote, Money
 
 from tessera_airwallex.models import BeneficiaryRef, Card, ConversionResult, Transfer
-from tessera_core.domain import Balance, Currency, FxQuote, Money
 
 
 class AirwallexPort(ABC):

@@ -5,6 +5,7 @@ May read `tessera_core` types. May NOT import `tessera_airwallex` or any databas
 """
 
 from tessera_agent.context import Obligation, PlannerSnapshot, build_context
+from tessera_agent.detect import InputFlag
 from tessera_agent.llm import (
     AnthropicLLM,
     FakeLLM,
@@ -20,6 +21,7 @@ from tessera_agent.llm import (
 )
 from tessera_agent.planner import Planner, PlanRecord, PlanResult
 from tessera_agent.prompts import PromptFile, load_prompt
+from tessera_agent.sanitize import ScreeningResult, UntrustedText, render_block, screen
 from tessera_agent.schemas import MAX_PROPOSALS, ProposalList
 from tessera_agent.tools import ReadOnlyTools
 
@@ -27,6 +29,7 @@ __all__ = [
     "MAX_PROPOSALS",
     "AnthropicLLM",
     "FakeLLM",
+    "InputFlag",
     "LLMClient",
     "LLMError",
     "LLMResponse",
@@ -39,11 +42,15 @@ __all__ = [
     "PromptFile",
     "ProposalList",
     "ReadOnlyTools",
+    "ScreeningResult",
     "ToolCall",
     "ToolResult",
     "ToolSpec",
+    "UntrustedText",
     "build_context",
     "llm_from_env",
     "load_prompt",
+    "render_block",
+    "screen",
     "tool_call_reply",
 ]

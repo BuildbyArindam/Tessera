@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import numpy as np
 import pandas as pd
-
 from tessera_core.forecast.history import History
 
 START = pd.Timestamp("2025-01-06")  # a Monday

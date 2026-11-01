@@ -1,6 +1,8 @@
 # Policy engine specification
 
-Status: Day 8 (core engine and ten rules, property-tested; the tenth is simulation-based).
+Status: Day 10 (core engine and twelve rules, property-tested; the tenth is simulation-based, the
+eleventh, `untrusted_input_gate`, reads the prompt-injection screening result, and the twelfth,
+`early_payment_gate`, escalates payments made well before they are due).
 Day 14 adds the autonomy gate.
 
 ## What it is
@@ -187,6 +189,42 @@ actions, `recent_approval_times` must list recent approvals, `card_loaded_this_m
 same calendar-month boundary as the card ceilings, and a `CONVERT` needs an executable quote
 fetched **before** asking for a decision.
 
+### `untrusted_input_gate` (Day 10)
+
+Applies to every action type. It can only `PASS` or `ESCALATE`; it never `BLOCK`s, so a flag can raise a
+case to a human but can never be the thing that stops a payment on its own. No parameters.
+
+`PolicyContext.input_screening` is the caller's report on the third-party text behind a proposal (invoice
+notes, memos, customer names, email bodies). It has three states, and they mean different things:
+
+| `input_screening` | Meaning | Verdict |
+| --- | --- | --- |
+| `None` | the screen was never run | `ESCALATE` for CONVERT, PAY_SUPPLIER and TOPUP_CARD (money moves on unchecked text); `PASS` for HOLD and FLAG_INVOICE |
+| `InputScreening()` (no codes) | the screen ran and found nothing | `PASS` |
+| `InputScreening(flag_codes=(...))` | the screen ran and raised these codes | `ESCALATE`, naming the codes |
+
+`flag_codes` are short lowercase codes (`^[a-z_]{1,40}$`, at most 24), so no attacker text can reach a
+reason string or the audit record through this field. The worker takes the codes from the planner's
+`PlanRecord`, never from the model's reply (a test shows nothing in a `Proposal` can set or clear them).
+
+Because the rule only escalates, every other rule keeps its authority: the allowlist, the card caps and the
+amount limits still `BLOCK` a fooled proposal whether or not the detector fired. The gate exists for the one
+class of attack those rules cannot see: an in-policy action the note talked the model into (for example an
+early payment to an approved supplier). See the Day 10 entry in `daily-log.md` for the measured residual.
+
+### `early_payment_gate` (Day 10)
+
+Applies to PAY_SUPPLIER. Parameter `max_days_early` (3). `ESCALATE` when the obligation named by the
+proposal's `obligation_id` falls due more than that many days after `now`; a late payment passes.
+
+The due date comes from `PolicyContext.obligation_due_dates` (obligation id -> date), built by the caller
+from its own records. The proposal only names the id; a due date written into `params` is ignored. It fails
+closed: no `obligation_id`, an id the caller does not know, or no due dates supplied is `ESCALATE`.
+
+Why it exists: red-team case RT-03 told a fooled model to pay an approved supplier 400,000 INR nine days
+early. Every other rule passed it, so with the detector bypassed it was approved and executed. It is now
+escalated by this rule alone, with or without the detector.
+
 ## Simulation (Day 8)
 
 `tessera_core.simulate.simulate(proposal, fx_history, as_of, n_paths, seed, *, due_date, config)` replays
@@ -281,3 +319,11 @@ and the other checks ignore the amount). A future rule that is not monotonic in 
   is only as good as it is.
 - Currencies are compared one at a time. There is no cross-currency total (for example, a daily cap
   across all currencies in USD terms).
+- `untrusted_input_gate` is only as good as the detector behind it. The red-team suite shows the detector
+  missing 2 of 25 hand-written attacks. With the detector withheld, none of the 25 executes, but an in-policy
+  conversion (5000 EUR to INR, inside every cap) is still APPROVED and executed (the RT-90 probe in
+  `tests/unit/test_redteam.py`). Policy cannot tell it from the agent's normal job; the other rules only bound it.
+- The gate trusts the caller to pass the real screening result for the text behind THIS proposal. `None` is
+  treated as "not run" and escalates money-moving actions, but a worker that always passes `InputScreening()`
+  would switch the gate off. Day 13 builds the context in one place (see `World.policy_context` in the
+  red-team package).

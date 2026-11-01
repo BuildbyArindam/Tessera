@@ -6,6 +6,7 @@ A rule declares which fields it needs (`Rule.required_context`) and the engine f
 caller assembles a snapshot, so a decision can be replayed from the audit log.
 """
 
+from datetime import date
 from decimal import Decimal
 from enum import IntEnum
 from typing import Annotated, TypeVar
@@ -53,6 +54,17 @@ class ForecastConfidence(DomainModel):
     relative_width: Decimal = Field(ge=0)
 
 
+class InputScreening(DomainModel):
+    """What the untrusted-input screen found for the planning run behind a proposal. Codes only.
+
+    Built by the caller from the planner's record. An empty `flag_codes` means the screen RAN and found
+    nothing; `PolicyContext.input_screening is None` means it never ran, and the gate treats that as
+    unknown, not as clean. Codes are short lowercase identifiers, so they are safe to put in a reason.
+    """
+
+    flag_codes: tuple[Annotated[str, Field(pattern=r"^[a-z_]{1,40}$")], ...] = Field(default=(), max_length=24)
+
+
 class PolicyContext(DomainModel):
     balances: dict[Currency, Money] | None = None
     spend_today: dict[Currency, Money] | None = None
@@ -75,6 +87,10 @@ class PolicyContext(DomainModel):
     card_loaded_this_month: dict[str, Money] | None = None
     # The simulator's verdict on THIS proposal (Day 8), built by the caller from simulate(...).
     simulation: SimulationSummary | None = None
+    # What the untrusted-input screen found for the run that produced this proposal (Day 10).
+    input_screening: InputScreening | None = None
+    # Obligation id -> the date it falls due, from the caller's own records. Never from a proposal (Day 10).
+    obligation_due_dates: dict[str, date] | None = None
 
     @field_validator("balances", "spend_today")
     @classmethod

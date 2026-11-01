@@ -1,0 +1,7 @@
+# Escalate EVERY proposal from a planning run whose untrusted text (invoice notes, memos, names,
+# email bodies, or the model's own rationale) was flagged by the screen, or whose screening result
+# is missing. Escalate only: it never approves, and any BLOCK from another rule still wins.
+# No parameters on purpose: any flag escalates, so there is no threshold to aim under.
+id: untrusted_input_gate
+type: untrusted_input_gate
+params: {}

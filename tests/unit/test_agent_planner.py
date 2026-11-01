@@ -79,7 +79,7 @@ def test_tools_then_a_valid_reply_yields_one_proposal_with_a_full_record(snapsho
     }
     assert result.evidence == {proposal.id: ("ev-1", "ev-2")}
     assert (rec.outcome, rec.attempts, rec.llm_calls) == ("ok", 1, 3)
-    assert rec.model == "fake-llm" and rec.prompt_hash == load_prompt().sha256 and rec.prompt_name == "planner_v1"
+    assert rec.model == "fake-llm" and rec.prompt_hash == load_prompt().sha256 and rec.prompt_name == "planner_v2"
     assert [t.name for t in rec.tool_calls] == ["list_upcoming_obligations", "simulate_proposal"]
     assert rec.evidence_ids == ("ev-1", "ev-2") and len(rec.context_hash) == 64
     assert all(c.temperature == 0.0 for c in llm.calls)  # temperature 0 on every call

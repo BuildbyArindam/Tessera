@@ -1,7 +1,6 @@
 import math
 
 import pytest
-
 from tessera_evalkit.metrics import bias, mae, smape, wape
 
 Y = [100.0, 200.0, 300.0]

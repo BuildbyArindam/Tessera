@@ -3,7 +3,6 @@ from decimal import Decimal
 
 import pytest
 from pydantic import SecretStr
-
 from tessera_airwallex import (
     IdempotencyConflictError,
     InsufficientFundsError,

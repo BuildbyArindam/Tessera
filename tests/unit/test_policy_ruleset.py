@@ -37,10 +37,12 @@ def test_shipped_rules_load_and_register() -> None:
         "card_limit_cap",
         "currency_concentration_cap",
         "daily_cumulative_cap",
+        "early_payment_gate",
         "forecast_confidence_gate",
         "kill_switch",
         "max_amount_per_action",
         "quote_slippage_guard",
+        "untrusted_input_gate",
         "velocity_limit",
         "worst_case_loss_gate",
     ]

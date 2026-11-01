@@ -6,7 +6,6 @@ from pathlib import Path
 
 import pytest
 from pydantic import ValidationError
-
 from tessera_airwallex import MockAirwallex
 from tessera_core.domain import Currency, CurrencyMismatchError, Money
 

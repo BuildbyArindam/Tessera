@@ -2,7 +2,6 @@ from decimal import Decimal
 
 import pytest
 from pydantic import ValidationError
-
 from tessera_core.domain import Currency, CurrencyMismatchError, Money
 
 USD, EUR = Currency.USD, Currency.EUR

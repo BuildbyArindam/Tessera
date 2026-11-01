@@ -33,7 +33,6 @@ import math
 import sys
 from dataclasses import dataclass
 from datetime import date, timedelta
-from decimal import Decimal
 from pathlib import Path
 
 import numpy as np
@@ -42,12 +41,23 @@ import pyarrow.parquet as pq
 
 from . import __version__
 from .calendars import (
-    add_months, clamp_day, month_starts, roll_back, roll_forward, window_end,
+    clamp_day,
+    month_starts,
+    roll_back,
+    roll_forward,
+    window_end,
 )
-from .fx import FxTable, load_fx
+from .fx import load_fx
 from .records import (
-    BusinessRec, CounterpartyRec, CustomerRec, GroundTruthRec, InvoiceRec,
-    OutflowRec, PaymentRec, Rec, cents_to_decimal,
+    BusinessRec,
+    CounterpartyRec,
+    CustomerRec,
+    GroundTruthRec,
+    InvoiceRec,
+    OutflowRec,
+    PaymentRec,
+    Rec,
+    cents_to_decimal,
 )
 from .rng import rng_for
 

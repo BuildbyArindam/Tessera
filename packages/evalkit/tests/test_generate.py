@@ -6,11 +6,16 @@ from decimal import Decimal
 
 import pyarrow.parquet as pq
 import pytest
-
 from tessera_evalkit import fx as fxmod
 from tessera_evalkit import generate as gen
 from tessera_evalkit.records import (
-    BusinessRec, CustomerRec, FxRateRec, GroundTruthRec, InvoiceRec, OutflowRec, PaymentRec,
+    BusinessRec,
+    CustomerRec,
+    FxRateRec,
+    GroundTruthRec,
+    InvoiceRec,
+    OutflowRec,
+    PaymentRec,
 )
 
 MONTHS = 18

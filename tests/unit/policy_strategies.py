@@ -9,7 +9,7 @@ from hypothesis import strategies as st
 from policy_helpers import NOW, sim_for
 from tessera_core.domain import ActionType, Money, Proposal
 from tessera_core.domain.currency import Currency
-from tessera_core.policy import ForecastConfidence, PolicyContext
+from tessera_core.policy import ForecastConfidence, InputScreening, PolicyContext
 
 CODES = [c.value for c in Currency]
 MONEY_MOVING = [ActionType.CONVERT, ActionType.PAY_SUPPLIER, ActionType.TOPUP_CARD]
@@ -127,6 +127,8 @@ def contexts(draw: st.DrawFn, complete: bool = False) -> PolicyContext:
     added = {b: NOW - timedelta(hours=draw(st.integers(-5, 100))) for b in BENEFICIARIES}
     approvals = tuple(NOW - timedelta(minutes=draw(st.integers(-10, 200))) for _ in range(draw(st.integers(0, 14))))
     width = Decimal(draw(st.integers(0, 8000))).scaleb(-4)
+    flagged = not complete and draw(st.integers(0, 4)) == 0  # Day 10: one run in five carries injection flags
+    screening = InputScreening(flag_codes=("instruction_phrase",) if flagged else ())
     return PolicyContext(
         kill_switch_engaged=maybe(not complete and draw(st.integers(0, 19)) == 0),
         now=maybe(NOW),
@@ -139,6 +141,7 @@ def contexts(draw: st.DrawFn, complete: bool = False) -> PolicyContext:
         fx_quote_rate=maybe({"USD/EUR": quote}),
         forecast_confidence=maybe({Currency.USD: ForecastConfidence(relative_width=width)}),
         card_loaded_this_month=maybe({"workspace_suite": _money(draw(st.integers(0, 70_000)))}),
+        input_screening=maybe(screening),
     )
 
 

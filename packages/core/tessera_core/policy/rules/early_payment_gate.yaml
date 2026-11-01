@@ -1,0 +1,5 @@
+# A payment more than this many days before its obligation falls due goes to a human.
+id: early_payment_gate
+type: early_payment_gate
+params:
+  max_days_early: 3

@@ -2,7 +2,8 @@
 
 A prompt is a file under `prompts/` named `<name>.md`. Its SHA-256 over the raw bytes is recorded with
 every planning run, so any decision can be traced to the exact text the model was given. Editing a prompt
-changes the hash; a new behaviour gets a new file (planner_v2.md), never a silent edit of v1.
+changes the hash; a new behaviour gets a new file (v2 added the untrusted-data section on Day 10),
+never a silent edit of an earlier version.
 """
 
 from __future__ import annotations
@@ -13,7 +14,7 @@ from importlib import resources
 
 from tessera_agent.canon import sha256_hex
 
-DEFAULT_PROMPT = "planner_v1"
+DEFAULT_PROMPT = "planner_v2"
 _NAME = re.compile(r"^[a-z0-9_]{1,40}$")
 
 
