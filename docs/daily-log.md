@@ -215,3 +215,46 @@ Not fixed or not claimed:
 - Lint scope slip, stated plainly: to remove stray invisible characters I ran `ruff check --fix` over `scripts`, `tests` and `packages`, which also applied ruff's SAFE fixes to older files outside Day 10 (airwallex `mock.py`, `models.py`, `port.py`; evalkit `generate.py`, `loading.py`, `forecast_eval.py`; several older tests and `verify_day4.py`). The full suite still passes. There is no git history here to diff against, so please review those files when you commit. Whole-repo ruff errors went from 45 to 23 as a side effect; 14 files still fail `ruff format --check`; mypy still shows the same 13 errors (airwallex, forecast), none in Day 10 code. mypy on `tessera_agent` and the red-team package reports nothing new.
 - Nothing is committed: `.claude/settings.json` denies `git add`, `git commit` and `git push`, and GitHub is read-only from this session. Suggested: branch `day-10-injection-defence`, tag `day-10`.
 - Live run requested on 2026-11-01 was NOT possible: no `LLM_API_KEY` in this sandbox, so `--live` stops at startup. Nothing has been measured against a real model.
+
+## Day 11 - Audit log, database and API
+Built `packages/store` (`tessera_store`: models, sessions, queries), `tessera_audit` (hash-chained log, canonical JSON, payload builders), the Alembic migration `0001` (nine tables, trigger), and the FastAPI service (`apps/api/tessera_api`: eight routes, API-key middleware). Details of the log are in `docs/audit-log.md`.
+
+Assumptions (simplest option chosen):
+- The tree has no home for the ORM models, and both the API and the worker need them, so there is a new package `packages/store`. The `audit_events` table and its enum live in `tessera_audit` next to the chain logic (store knows nothing of audit; audit depends on store's declarative base).
+- The hash covers `seq`, `timestamp` and `event_type` as well as the payload (brief: `sha256(prev_hash + canonical_payload)`). Without them an event could be relabelled and still verify. The payload is stored as canonical JSON TEXT, not JSONB, so the hashed bytes are the stored bytes.
+- Proposal status: `PENDING_APPROVAL` (policy said ESCALATE), `APPROVED` (policy said APPROVE, or a human approved), `REJECTED`, `BLOCKED`. Day 13 adds the execution states. Approving never executes and never re-runs policy: the worker does that. Only a PENDING_APPROVAL proposal can be decided, once (row lock, plus a UNIQUE on `approvals.proposal_id`).
+- `POST /plan/run` takes its inputs (balances, FX history, beneficiaries, obligations, the policy context) from a `WorldProvider`. The API may not import Airwallex, so it cannot fetch balances; assembling the world is the worker's job (Day 13). With no provider attached the route answers 503. Tests and `scripts/serve_day11_demo.py` attach the red-team fixture world and a SCRIPTED model.
+- Plan runs are idempotent: the planner derives proposal ids from the state, so planning an unchanged state finds the same ids and writes nothing.
+- A policy context that cannot be built is a BLOCK with `policy_error`, never an APPROVE.
+- One API key stands for one actor, `operator`. Only the OpenAPI docs are public. The app refuses to start with a key under 16 characters.
+- `GET /forecasts` reads stored rows; no route writes them (none was in the list). `repo.save_forecasts` is for the worker and tests. Emitted today: `proposal_created`, `policy_decision`, `approval_requested`, `approved`, `rejected`. Defined, emitted by nobody yet: `forecast_made`, `execution_*`, `webhook_received`, `autonomy_changed`.
+- `policy_decisions.phase` ('plan' or 'execution') and the `executions` table exist now so Day 13 needs no schema change for the execution-time re-check; nothing writes them yet.
+
+Verification (scripts/verify_day11.py, exit 0; `make test-integration`; `make test`):
+- Unit suite 866 passed (836 at the start of today, 30 new). Integration suite 131 passed against PostgreSQL 16. `pytest tests` (both, one command): 997 passed.
+- Migration: upgrade, `alembic check` (models and migration agree, no diff), downgrade to base, upgrade again, all clean. Nine tables; no money column is a float (NUMERIC(20,2), checked in information_schema).
+- Tamper evidence: 10 events verify OK; raw UPDATE, DELETE and TRUNCATE are rejected by the trigger (sqlstate 23001). With the trigger switched off in a scratch database: an edited payload names its seq (7 in the script), an edited event type or timestamp is caught, a deleted middle row is named, and an edited row with its own hash recomputed is caught at the next row.
+- Concurrency: 8 threads x 10 appends gave seqs 1..80 with no gap and a valid chain; 6 simultaneous approvals of one proposal gave one 200, five 409s, one approval row, one `approved` event.
+- Every route over HTTP with curl (17 requests): 401 with no key or a wrong key, 422 on malformed input, 404, 409, 200/201 as expected, `/docs` 200. After the run the chain verifies (8 events).
+- Replay: the `policy_decision` payload holds the context the engine saw; rebuilding the proposal and context from the log and re-running the real engine gives the same verdict, reasons and ruleset hash for all three proposals.
+- Dependency rule (AST test): store, audit and the API import nothing from Airwallex; store and audit import neither the agent nor the API; core imports no database or web module.
+- mypy strict: 0 errors in store, audit and the API (the 3 pre-existing errors in `forecast/` are unchanged). Whole-repo ruff: 23 errors, the same 23 as before today (none in anything new); all new files pass `ruff format`.
+- Mutation checks (by hand, on the real files, then restored): fail-closed fallback returning APPROVE, no row lock on approve, status guard removed, audit context dropped, ESCALATE mapped to APPROVED, and `verify_chain` reading cached rows: each made a test fail.
+
+Surprised me (five problems found late, all fixed):
+- FastAPI's default 422 body returns the rejected input. A lone surrogate in a note could not be encoded, so the error response itself became a 500. The handler now sends only `type`, `loc` and `msg`.
+- A malformed JSON body got 422 before the API-key check. An authentication middleware now runs first (the route-level dependency stays, for the OpenAPI docs).
+- `verify_chain` could read a session's cached copy of a row instead of the database's. It now uses `populate_existing`.
+- Twice I wrote `:99` inside a SQL string in a test and SQLAlchemy read it as a bind parameter.
+- Each suite passed alone but `pytest tests` could not collect: `tests/unit` already has a `helpers.py`, and one integration test imported from `conftest`, so the module names collided. My helper is now `tests/integration/it_helpers.py`. I only saw it because I ran both suites in one command at the end.
+Would do differently: write the verification script's checks before the routes. The two real bugs above only appeared when a test sent hostile input; I had written the happy path first.
+
+Not fixed or not claimed:
+- THE TEST DATABASE WAS NOT DOCKER. The brief asks for a test database in Docker. In this sandbox the Docker daemon starts but the registry refuses image pulls (HTTP 403 from the proxy), so everything ran against a locally installed PostgreSQL 16.15. `docker-compose.yml` now has `postgres-test` (profile `test`, port 5433) and `make db-test-up` / `make test-integration` use it, but I have not run that path. First thing to do on your machine: `make db-test-up && make test-integration`.
+- `POST /plan/run` has no real data provider. It is proven only with the red-team fixture world and a scripted model. There is no live model call anywhere in Day 11, and the API still cannot assemble a real snapshot until the Day 13 worker exists.
+- The chain does not catch removal of the newest rows or a full re-hash; the trigger does not stop a table owner or superuser. Both are written up with a fix (publish `head()`; a least-privilege role) in `docs/audit-log.md`. The grants there are untested: every database used here is a superuser.
+- A plan run that yields nothing (invalid or failed model output) leaves no audit event.
+- `GET /audit/verify` walks the whole table (fine now, O(n) later). `/proposals` and `/audit` give no total counts.
+- No CORS (the dashboard on Day 15 needs it), no rate limiting, no TLS.
+- Running a plan run holds no lock during the model call, so two simultaneous runs can both call the model; the second finds the first's proposal ids and writes nothing, but it still pays for the call.
+- Nothing is committed. `.claude/settings.json` denies `git add`, `git commit`, `git push` and `git config`, and GitHub access from this session is read-only (the push check was refused). The work is in the working tree: new `packages/store/`, `migrations/`, `alembic.ini`, `apps/api/tessera_api/*`, `packages/audit/*`, tests, scripts, docs, plus edits to `Makefile`, `docker-compose.yml`, `.env.example`, `pyproject.toml` and the `apps/api` and `packages/audit` pyprojects. Suggested: branch `day-11-audit-api`, tag `day-11`.

@@ -1,4 +1,4 @@
-.PHONY: setup up down test lint typecheck eval redteam demo fmt
+.PHONY: setup up down test test-integration db-test-up db-test-down migrate api lint typecheck eval redteam demo fmt
 
 VENV := .venv
 BIN  := $(VENV)/bin
@@ -7,17 +7,32 @@ setup:  ## create venv and install all packages in editable mode
 	uv venv --python 3.11 $(VENV)
 	uv pip install --python $(BIN)/python \
 		-e packages/core -e packages/airwallex -e packages/agent \
-		-e packages/audit -e packages/evalkit -e apps/api -e apps/worker \
+		-e packages/store -e packages/audit -e packages/evalkit -e apps/api -e apps/worker \
 		pytest pytest-cov hypothesis ruff mypy pre-commit import-linter types-PyYAML
 
-up:  ## start postgres, api, worker, web (services land on Day 11+)
-	docker compose up -d
+up:  ## start postgres (api, worker and web services land on Days 13 to 16)
+	docker compose up -d --wait postgres
 
 down:
 	docker compose down
 
-test:  ## unit tests (integration/e2e are opt-in by marker or path)
+test:  ## unit tests (no database needed)
 	$(BIN)/python -m pytest tests/unit
+
+test-integration:  ## database and API tests: start a database first (make db-test-up), or set TEST_DATABASE_ADMIN_URL
+	TESSERA_REQUIRE_DB=1 $(BIN)/python -m pytest tests/integration
+
+db-test-up:  ## throwaway PostgreSQL 16 for the integration tests, on port 5433, kept in memory
+	docker compose --profile test up -d --wait postgres-test
+
+db-test-down:
+	docker compose --profile test rm -sf postgres-test
+
+migrate:  ## apply database migrations to DATABASE_URL
+	$(BIN)/alembic upgrade head
+
+api:  ## run the API on :8000 (needs DATABASE_URL and TESSERA_API_KEY; no plan-run provider is attached)
+	$(BIN)/uvicorn --factory tessera_api.main:create_app --port 8000
 
 lint:  ## ruff; import-linter contracts are added on Day 13
 	$(BIN)/ruff check .
@@ -28,7 +43,8 @@ fmt:
 	$(BIN)/ruff format .
 
 typecheck:  ## mypy strict on tessera_core, standard on the rest
-	$(BIN)/mypy packages/core/tessera_core packages/airwallex/tessera_airwallex packages/agent/tessera_agent
+	$(BIN)/mypy packages/core/tessera_core packages/airwallex/tessera_airwallex packages/agent/tessera_agent \
+		packages/store/tessera_store packages/audit/tessera_audit apps/api/tessera_api
 
 eval:  ## forecast and savings evaluation (Day 17)
 	@echo "eval: not implemented yet (Day 17)"

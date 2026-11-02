@@ -1,0 +1,18 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "tessera-store"
+version = "0.1.0"
+description = "PostgreSQL persistence: SQLAlchemy 2 models, sessions and queries shared by the API and the worker."
+requires-python = ">=3.11"
+dependencies = [
+    "tessera-core",
+    "sqlalchemy>=2.0",
+    "psycopg[binary]>=3.1",
+    "alembic>=1.13",
+]
+
+[tool.setuptools.packages.find]
+include = ["tessera_store*"]
