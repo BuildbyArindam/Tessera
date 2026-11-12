@@ -7,7 +7,7 @@ name = "tessera-airwallex"
 version = "0.1.0"
 description = "Airwallex execution port plus mock and sandbox adapters."
 requires-python = ">=3.11"
-dependencies = ["tessera-core", "pydantic>=2.7"]
+dependencies = ["tessera-core", "pydantic>=2.7", "httpx>=0.27"]
 
 [tool.setuptools.packages.find]
 include = ["tessera_airwallex*"]

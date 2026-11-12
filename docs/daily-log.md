@@ -258,3 +258,48 @@ Not fixed or not claimed:
 - No CORS (the dashboard on Day 15 needs it), no rate limiting, no TLS.
 - Running a plan run holds no lock during the model call, so two simultaneous runs can both call the model; the second finds the first's proposal ids and writes nothing, but it still pays for the call.
 - Nothing is committed. `.claude/settings.json` denies `git add`, `git commit`, `git push` and `git config`, and GitHub access from this session is read-only (the push check was refused). The work is in the working tree: new `packages/store/`, `migrations/`, `alembic.ini`, `apps/api/tessera_api/*`, `packages/audit/*`, tests, scripts, docs, plus edits to `Makefile`, `docker-compose.yml`, `.env.example`, `pyproject.toml` and the `apps/api` and `packages/audit` pyprojects. Suggested: branch `day-11-audit-api`, tag `day-11`.
+
+## Day 12 - Airwallex adapter, part 1
+
+Built `tessera_airwallex.sandbox.SandboxAirwallex` (`get_balances`, `create_fx_quote`, `execute_conversion`) on a new HTTP layer (`_http.py`: token login and cache, bounded retries, redacted logging; `_errormap.py`; `_json.py`; `_redact.py`; `_timeparse.py`), typed errors (`AuthError`, `RateLimitedError`, `UnknownError`, plus `ValidationError` as an alias of `InvalidRequestError`), one shared contract suite (`tests/contract`) and a stateful respx fake of the sandbox (`tests/fake_airwallex.py`). `create_beneficiary`, `create_transfer`, `create_card` and `set_card_limits` raise `NotImplementedError` until Day 13.
+
+Assumptions (simplest option chosen):
+- `docs/airwallex-notes.md` was still the empty template, so I filled it from the official reference first (every row says VERIFIED or UNVERIFIED, with its source URL). The client uses only what is VERIFIED there.
+- Two reference versions disagree on conversions (`/api/v1/conversions/create` with `reason` and `term_agreement` in 2024-04-30; `/api/v1/fx/conversions/create` in the current pages). The client targets the current pages.
+- A repeated `request_id` is documented only as "rejected". The port promises a replay, so `execute_conversion` looks the conversion up by `request_id` before creating and again after any unknown outcome or unrecognised 4xx. This also makes a restart after a crash safe, even once the quote has expired.
+- `ValidationError` is an alias of the existing `InvalidRequestError`, and the new errors follow the existing `...Error` naming (`RateLimitedError`, `UnknownError`), rather than adding a second set of names.
+- A 401 is never retried (the brief says never 4xx). The token is refreshed 2 minutes before `expires_at`, and a 401 clears the cache so the next call logs in again.
+- Money never touches a float: responses are parsed with `parse_float=Decimal`, and the quote amount, which the reference says is a JSON number, is written as a bare number from a Decimal.
+- `client_rate`'s direction is not documented, so the rate is taken from the amounts: used as is if `sell * rate` matches `buy`, else inverted, else the quote is refused.
+- `packages/airwallex` was missing from `mypy_path`, so mypy could not resolve the package's own imports; added. `.env.example` had the host `api-demo.airwallex.com`; the reference says `api.sandbox.airwallex.com`; corrected.
+
+Verification (`make test`, `make typecheck`, `ruff`, a mutation run):
+- `make test` (unit + contract): 976 passed, 15 skipped. The 15 skips are the live-sandbox variant of the contract suite (no credentials here). The contract suite is 15 tests, run three ways: mock (15 pass), sandbox client over the fake server (15 pass), live sandbox (15 skipped).
+- New tests: 42 for the HTTP layer, 38 for the adapter, 15x3 contract. A 401 makes exactly one call and no sleep; a 503 is retried with delays 0.5 s then 1.0 s, a persistent one stops after 4 attempts; 400, 404, 409, 422 and 429 are never retried.
+- Secrets: a DEBUG-logging run where the error body echoes the API key, client id and token produces no occurrence of any of them in the logs or in `str(error)`; request bodies log with `account_number` redacted; a grep finds no hard-coded key-like string, and credentials are read only in `SandboxConfig.from_env` and the login call.
+- mypy strict: 0 errors in the new code (the 3 pre-existing `core/forecast` errors are unchanged). Whole-repo ruff: 23, the same 23 as before; files touched today are clean and formatted.
+- Mutation checks (by hand, files restored after each): retrying 4xx, dropping the lookup before create, parsing floats, disabling secret scrubbing, never refreshing the token, never reconciling, sending the quote amount as a string, not detecting a key reused for another quote, skipping the rate-direction check, retrying a 401, dropping the request/quote match check, ignoring the `request_id` re-check: 12 of 12 made a test fail.
+- Dependency rule: the isolation tests still pass; nothing outside `packages/airwallex` imports the new code except `scripts/record_airwallex_fixtures.py`.
+
+Surprised me:
+- The reference pages I could read do not say how a duplicate `request_id` fails, what an error body looks like, or which header selects the API version. I would have had to guess all three. The first two are now handled without needing the answer; the version header is an optional env var, off by default, and is the first thing to check with real credentials.
+- My first `dumps` for "a Decimal as a bare JSON number" used a control-character marker that `json.dumps` escapes, so it silently never matched. It now uses a random per-process marker, which also means text in a payload (an invoice note) cannot forge a number.
+- `httpx`'s `json=` argument in my own tests quietly turned a 17-digit rate into a float and lost digits; the adapter was right and the test fixture was wrong. Tests now serve fixtures through the Decimal-safe encoder.
+Would do differently: read the reference (and fill the notes) before writing a line, as the Day 1 checklist said; the 30 minutes I skipped then cost about the same now.
+
+Not fixed or not claimed:
+- NOTHING HAS BEEN RUN AGAINST THE REAL SANDBOX. No credentials in this session. The live contract tests, the recorder (`scripts/record_airwallex_fixtures.py`) and every UNVERIFIED row in `docs/airwallex-notes.md` are untested. Run `AIRWALLEX_BASE_URL=... AIRWALLEX_CLIENT_ID=... AIRWALLEX_API_KEY=... pytest tests/contract` (add `AIRWALLEX_LIVE_EXECUTE=1` for the conversion tests; it needs a funded USD wallet), then the recorder.
+- The fixtures in `tests/fixtures/airwallex` are derived from the reference's field lists, not recorded. The sandbox-replay variant therefore proves the client against my reading of the reference, not against the vendor.
+- The fake enforces rules I inferred (amount types, a 64-character `request_id`, single-use quotes) and invents the duplicate-request code. If the real sandbox differs, the contract tests will say so.
+- Unknown until a live run: the API version header and the default version (a 404 or `invalid_endpoint` is the likely symptom), whether `get_balances` shows a conversion before it settles, and whether a negative or overdraft balance exists (the `Balance` model would reject it, so `get_balances` would raise `UnknownError`).
+- Only the 2022-09-09 balances page was reachable; the current one may differ.
+- `execute_conversion` costs one extra list call per execution (the lookup before creating). Worth it for crash safety; a cache keyed by idempotency key in the executions table (Day 13) could avoid it.
+- Nothing is committed: `.claude/settings.json` denies `git add`, `git commit` and `git push`, and this session's GitHub access is read-only. Suggested: branch `day-12-airwallex-sandbox`, tag `day-12`. Changed or new: `docs/airwallex-notes.md`, `.env.example`, `Makefile`, `pyproject.toml`, `packages/airwallex/*` (7 new/changed files), `tests/airwallex_fixtures.py`, `tests/fake_airwallex.py`, `tests/fixtures/`, `tests/contract/`, two new unit test files, `scripts/record_airwallex_fixtures.py`, this log.
+
+### Day 12 verification pass (2026-11-03)
+
+- Credentials: none of `AIRWALLEX_*` were set in the session and `api.sandbox.airwallex.com` was unreachable from the container (HTTP 000), so the live contract tests, a real balance fetch and a real quote were NOT run. 18 contract tests x 3 adapters: mock 18 pass, sandbox client over the fake server 18 pass, live 18 skipped.
+- Mocked server: a 401 makes 1 call and 0 sleeps; 503, 503, 200 makes 3 calls with sleeps 0.5 s and 1.0 s; a permanent 503 stops after 4 calls with sleeps 0.5, 1.0, 2.0 and raises `UnknownError`.
+- Secrets: a DEBUG run with sentinel API key, client id, account number, IBAN and token, against a server that echoes them back in an error message, left 0 occurrences in 33 log lines and 6 exception texts. Static grep of source, scripts and tracked files: no key values (the `AIRWALLEX_API_KEY=...` lines are placeholders). Account numbers only appear in a request body in a unit test, where the log shows `[REDACTED]`. The sandbox client does not send account numbers yet (beneficiaries are Day 13).
+- Mock vs sandbox: ran 14 edge cases through both. Found and fixed three differences (expiry boundary, whitespace-only key, sub-cent amount), each with a contract test that fails when the fix is reverted. Remaining differences are listed in `docs/airwallex-notes.md`; four methods are unimplemented in the client until Day 13.
+- `make test`: 982 passed, 18 skipped.

@@ -1,0 +1,19 @@
+{
+  "quote_id": "q-fixture-0001",
+  "awx_rate": 0.9352,
+  "mid_rate": 0.9352,
+  "client_rate": 0.92345678901234567,
+  "buy_currency": "EUR",
+  "buy_amount": 923.46,
+  "sell_currency": "USD",
+  "sell_amount": 1000,
+  "currency_pair": "USDEUR",
+  "dealt_currency": "USD",
+  "conversion_date": "2026-11-02",
+  "valid_from_at": "2026-11-02T10:00:00+0000",
+  "valid_to_at": "2026-11-02T10:01:00+0000",
+  "validity": "MIN_1",
+  "usage": "SINGLE_USE",
+  "rate_details": [{"level": "CLIENT", "rate": 0.92345678901234567, "buy_amount": 923.46, "sell_amount": 1000}],
+  "application_fees": []
+}
