@@ -8,7 +8,7 @@ setup:  ## create venv and install all packages in editable mode
 	uv pip install --python $(BIN)/python \
 		-e packages/core -e packages/airwallex -e packages/agent \
 		-e packages/store -e packages/audit -e packages/evalkit -e apps/api -e apps/worker \
-		pytest pytest-cov hypothesis ruff mypy pre-commit import-linter types-PyYAML
+		pytest pytest-cov hypothesis respx ruff mypy pre-commit import-linter types-PyYAML
 
 up:  ## start postgres (api, worker and web services land on Days 13 to 16)
 	docker compose up -d --wait postgres
@@ -16,8 +16,8 @@ up:  ## start postgres (api, worker and web services land on Days 13 to 16)
 down:
 	docker compose down
 
-test:  ## unit tests (no database needed)
-	$(BIN)/python -m pytest tests/unit
+test:  ## unit tests and the Airwallex contract suite (no database needed)
+	$(BIN)/python -m pytest tests/unit tests/contract
 
 test-integration:  ## database and API tests: start a database first (make db-test-up), or set TEST_DATABASE_ADMIN_URL
 	TESSERA_REQUIRE_DB=1 $(BIN)/python -m pytest tests/integration

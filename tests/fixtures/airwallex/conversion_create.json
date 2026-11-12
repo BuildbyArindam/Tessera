@@ -1,0 +1,21 @@
+{
+  "conversion_id": "c-fixture-0001",
+  "request_id": "req-fixture-0001",
+  "short_reference_id": "C000001",
+  "quote_id": "q-fixture-0001",
+  "buy_currency": "EUR",
+  "buy_amount": 923.46,
+  "sell_currency": "USD",
+  "sell_amount": 1000,
+  "dealt_currency": "USD",
+  "client_rate": 0.92345678901234567,
+  "awx_rate": 0.9352,
+  "mid_rate": 0.9352,
+  "currency_pair": "USDEUR",
+  "conversion_date": "2026-11-02",
+  "created_at": "2026-11-02T10:00:20+0000",
+  "updated_at": "2026-11-02T10:00:20+0000",
+  "settlement_cutoff_at": "2026-11-02T16:00:00+0000",
+  "status": "SCHEDULED",
+  "application_fees": []
+}

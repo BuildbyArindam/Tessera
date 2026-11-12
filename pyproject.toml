@@ -19,7 +19,7 @@ extend-immutable-calls = ["fastapi.Depends", "fastapi.Query", "fastapi.Path", "f
 python_version = "3.11"
 strict = true
 plugins = ["pydantic.mypy"]
-mypy_path = "packages/core:packages/evalkit:packages/agent:packages/store:packages/audit:apps/api"
+mypy_path = "packages/core:packages/airwallex:packages/evalkit:packages/agent:packages/store:packages/audit:apps/api"
 explicit_package_bases = true
 namespace_packages = true
 

@@ -94,7 +94,7 @@ class MockAirwallex(AirwallexPort):
 
     def _replay(self, key: str, fingerprint: str, model: type[T]) -> T | None:
         """Return the stored result if `key` was seen with the same request."""
-        if not key:
+        if not key or not key.strip():
             raise InvalidRequestError("idempotency_key must be non-empty")
         seen = self._idempotency.get(key)
         if seen is None:
