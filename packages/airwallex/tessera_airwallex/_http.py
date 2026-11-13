@@ -99,14 +99,20 @@ class SandboxHttp:
         *,
         params: Mapping[str, str | int] | None = None,
         body: Mapping[str, Any] | None = None,
+        retry: bool = True,
     ) -> Any:
-        """Authenticated JSON call. Returns the parsed body (floats as Decimal) or raises a port error."""
+        """Authenticated JSON call. Returns the parsed body (floats as Decimal) or raises a port error.
+
+        `retry=False` makes exactly one attempt: for a create call that has no request_id the vendor cannot
+        deduplicate, so repeating it after a lost response could create a second record. The caller then
+        reconciles (looks the record up) instead.
+        """
         headers = {"Authorization": f"Bearer {self._bearer()}", **self._common_headers()}
         content = _json.dumps(body).encode() if body is not None else None
         if content is not None:
             headers["Content-Type"] = "application/json"
             self._debug("request", path, content.decode())
-        response = self._send(method, path, headers=headers, params=params, content=content)
+        response = self._send(method, path, headers=headers, params=params, content=content, retry=retry)
         if response.status_code == 401:
             self._invalidate_token()
         return self._parse(response, method, path)
@@ -167,9 +173,10 @@ class SandboxHttp:
         headers: Mapping[str, str],
         params: Mapping[str, str | int] | None = None,
         content: bytes | None = None,
+        retry: bool = True,
     ) -> httpx.Response:
         url = self._cfg.base_url + path
-        attempts = self._cfg.max_retries + 1
+        attempts = self._cfg.max_retries + 1 if retry else 1
         reason, status = "", None
         for attempt in range(1, attempts + 1):
             started = time.monotonic()

@@ -101,9 +101,7 @@ class MockAirwallex(AirwallexPort):
             return None
         stored_fingerprint, result = seen
         if stored_fingerprint != fingerprint:
-            raise IdempotencyConflictError(
-                f"idempotency key {key!r} reused for a different request"
-            )
+            raise IdempotencyConflictError(f"idempotency key {key!r} reused for a different request")
         if not isinstance(result, model):  # pragma: no cover - same fingerprint implies same op
             raise IdempotencyConflictError(f"idempotency key {key!r} belongs to another operation")
         return result
@@ -227,6 +225,8 @@ class MockAirwallex(AirwallexPort):
             raise InvalidRequestError("transfer currency must match the beneficiary currency")
         if not amount.is_positive():
             raise InvalidRequestError("transfer amount must be positive")
+        if not reference.strip():
+            raise InvalidRequestError("transfer reference must be non-empty")
         self._debit(amount)
         transfer = Transfer(
             transfer_id=self._next_id("transfer"),

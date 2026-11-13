@@ -40,12 +40,15 @@ PAYMENT_DIRECTIONS = ("INBOUND", "OUTBOUND")
 ACTION_TYPES = ("CONVERT", "HOLD", "PAY_SUPPLIER", "TOPUP_CARD", "FLAG_INVOICE")
 VERDICTS = ("APPROVE", "ESCALATE", "BLOCK")
 # PENDING_APPROVAL: policy said ESCALATE, a human must decide. APPROVED: ready for the worker, which re-checks
-# policy before it executes (approval never executes). BLOCKED and REJECTED are terminal. Day 13 adds the
-# execution states (SUBMITTED, SETTLED, FAILED) in its own migration.
-PROPOSAL_STATUSES = ("PENDING_APPROVAL", "APPROVED", "REJECTED", "BLOCKED")
+# policy before it executes (approval never executes). BLOCKED and REJECTED are terminal. SUBMITTED, SETTLED and
+# FAILED follow the execution (migration 0002). tests/unit/test_store_enums.py ties this list to the lifecycle table.
+PROPOSAL_STATUSES = (
+    "PENDING_APPROVAL", "APPROVED", "REJECTED", "BLOCKED", "SUBMITTED", "SETTLED", "FAILED",
+)  # fmt: skip
 DECISION_PHASES = ("plan", "execution")
 HUMAN_DECISIONS = ("APPROVED", "REJECTED")
 EXECUTION_STATUSES = ("PENDING", "SUBMITTED", "SETTLED", "FAILED")
+WEBHOOK_OUTCOMES = ("applied", "ignored", "unmatched")
 
 
 def in_list(column: str, values: tuple[str, ...]) -> str:
@@ -198,7 +201,13 @@ class Approval(Base):
 
 
 class Execution(Base):
-    """One attempt to act on an approved proposal. The idempotency key is stored BEFORE the call (Day 13)."""
+    """The one attempt to act on an approved proposal (unique per proposal).
+
+    The row, with its idempotency key, is committed BEFORE the vendor call. After a crash the worker finds it still
+    PENDING and replays the same key, so the vendor never sees a second request. `vendor_request_id` is the id the
+    vendor knows the request by (derived from the key); a webhook that carries it finds the row before `external_id`
+    is known.
+    """
 
     __tablename__ = "executions"
 
@@ -210,9 +219,36 @@ class Execution(Base):
     result: Mapped[dict[str, Any] | None] = mapped_column(JSONB)
     created_at: Mapped[datetime] = _now()
     updated_at: Mapped[datetime] = _now()
+    vendor_request_id: Mapped[str | None] = mapped_column(String(64))
 
     __table_args__ = (
         CheckConstraint(in_list("status", EXECUTION_STATUSES), name="status"),
         UniqueConstraint("idempotency_key"),
-        Index("ix_executions_proposal_id", "proposal_id"),
+        UniqueConstraint("proposal_id", name="uq_executions_proposal_id"),
+        Index("ix_executions_external_id", "external_id"),
+        Index("ix_executions_vendor_request_id", "vendor_request_id"),
+    )
+
+
+class WebhookEvent(Base):
+    """Every webhook delivery that passed signature and freshness checks. The primary key IS the dedupe.
+
+    Only the envelope is kept (id, name, ids): a payload can carry bank details, so the body is never stored.
+    `unmatched` means no execution knew the event yet; the worker retries those when it reconciles.
+    """
+
+    __tablename__ = "webhook_events"
+
+    id: Mapped[str] = mapped_column(String(128), primary_key=True)
+    name: Mapped[str] = mapped_column(String(128))
+    resource_id: Mapped[str | None] = mapped_column(String(128))
+    request_id: Mapped[str | None] = mapped_column(String(128))
+    event_created_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    received_at: Mapped[datetime] = _now()
+    outcome: Mapped[str] = mapped_column(String(10))
+    execution_id: Mapped[int | None] = mapped_column(ForeignKey("executions.id"))
+
+    __table_args__ = (
+        CheckConstraint(in_list("outcome", WEBHOOK_OUTCOMES), name="outcome"),
+        Index("ix_webhook_events_outcome", "outcome"),
     )

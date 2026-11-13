@@ -9,17 +9,27 @@ from tessera_core.domain.entities import (
     Payment,
     PaymentDirection,
 )
+from tessera_core.domain.lifecycle import (
+    ActionState,
+    ExecutionState,
+    IllegalTransitionError,
+    transition_action,
+    transition_execution,
+)
 from tessera_core.domain.money import MAX_ABS_AMOUNT, CurrencyMismatchError, Money
 from tessera_core.domain.simulation import SimulationSummary
 
 __all__ = [
     "MAX_ABS_AMOUNT",
+    "ActionState",
     "ActionType",
     "Balance",
     "Beneficiary",
     "Currency",
     "CurrencyMismatchError",
+    "ExecutionState",
     "FxQuote",
+    "IllegalTransitionError",
     "Invoice",
     "InvoiceStatus",
     "Money",
@@ -29,4 +39,6 @@ __all__ = [
     "Proposal",
     "SimulationSummary",
     "Verdict",
+    "transition_action",
+    "transition_execution",
 ]

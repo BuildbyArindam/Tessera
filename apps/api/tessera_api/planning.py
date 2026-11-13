@@ -63,7 +63,7 @@ class PlanRunSummary:
     already_known: tuple[str, ...]
 
 
-def _decide(
+def decide_proposal(
     world: PlanningWorld, proposal: Proposal, flag_codes: tuple[str, ...], ruleset: Ruleset
 ) -> tuple[PolicyDecision, PolicyContext | None]:
     """Policy's verdict for one proposal. If the context cannot be built, the answer is BLOCK, never APPROVE."""
@@ -100,7 +100,7 @@ def run_plan(
         if repo.get_proposal(session, proposal.id) is not None:
             known.append(proposal.id)
             continue
-        decision, context = _decide(world, proposal, result.flag_codes, ruleset)
+        decision, context = decide_proposal(world, proposal, result.flag_codes, ruleset)
         inserted = repo.insert_proposal_if_new(
             session,
             proposal,

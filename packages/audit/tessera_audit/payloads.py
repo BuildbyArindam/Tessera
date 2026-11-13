@@ -90,3 +90,51 @@ def approval_requested_payload(proposal_id: str, decision: PolicyDecision) -> di
         "reasons": list(decision.reasons),
         "ruleset_hash": decision.ruleset_hash,
     }
+
+
+def execution_submitted_payload(
+    proposal_id: str, *, execution_id: int, idempotency_key: str, action_type: str, external_id: str | None
+) -> dict[str, Any]:
+    """The vendor accepted the request. The key is the one stored before the call, so a reviewer can match them."""
+    return {
+        "proposal_id": proposal_id,
+        "execution_id": execution_id,
+        "idempotency_key": idempotency_key,
+        "action_type": action_type,
+        "external_id": external_id,
+    }
+
+
+def execution_result_payload(
+    proposal_id: str, *, execution_id: int, outcome: str, source: str, detail: Mapping[str, Any] | None
+) -> dict[str, Any]:
+    """How an execution ended. `source` is where the news came from: adapter, webhook or worker."""
+    return {
+        "proposal_id": proposal_id,
+        "execution_id": execution_id,
+        "outcome": outcome,
+        "source": source,
+        "detail": None if detail is None else dict(detail),
+    }
+
+
+def webhook_received_payload(
+    *,
+    event_id: str,
+    name: str,
+    resource_id: str | None,
+    request_id: str | None,
+    event_created_at: Any,
+    outcome: str,
+    execution_id: int | None,
+) -> dict[str, Any]:
+    """The event envelope and what Tessera did with it. The body is never stored: it can carry bank details."""
+    return {
+        "event_id": event_id,
+        "name": name,
+        "resource_id": resource_id,
+        "request_id": request_id,
+        "event_created_at": event_created_at,
+        "outcome": outcome,
+        "execution_id": execution_id,
+    }

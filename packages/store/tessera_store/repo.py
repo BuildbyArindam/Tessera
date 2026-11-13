@@ -9,7 +9,7 @@ from __future__ import annotations
 from collections.abc import Iterable, Sequence
 from datetime import date
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
@@ -18,6 +18,7 @@ from tessera_core.domain import Proposal as ProposalModel
 from tessera_core.forecast import ForecastResult
 
 from tessera_store import models as m
+from tessera_store.repo_exec import move_proposal
 
 UNIQUE_VIOLATION = "23505"
 
@@ -184,9 +185,19 @@ def approvals_for(session: Session, proposal_ids: Sequence[str]) -> dict[str, m.
 def record_human_decision(
     session: Session, proposal: m.Proposal, *, decision: str, actor: str, note: str | None, new_status: str
 ) -> m.Approval:
-    """Write the approval row and move the proposal. The caller holds the row lock and checked the old status."""
-    row = m.Approval(proposal_id=proposal.id, decision=decision, actor=actor, note=note)
-    session.add(row)
-    proposal.status = new_status
+    """Write the approval row and move the proposal. The caller holds the row lock and checked the old status.
+
+    The move goes through the lifecycle table. A proposal the worker sent back for a second look (APPROVED ->
+    PENDING_APPROVAL) already has an approval row from the first round; the new decision replaces it, and the audit
+    chain keeps both.
+    """
+    move_proposal(session, proposal, new_status)
+    row = session.scalars(select(m.Approval).where(m.Approval.proposal_id == proposal.id)).one_or_none()
+    if row is None:
+        row = m.Approval(proposal_id=proposal.id, decision=decision, actor=actor, note=note)
+        session.add(row)
+    else:
+        row.decision, row.actor, row.note, row.decided_at = decision, actor, note, func.now()
     session.flush()
+    session.refresh(row)
     return row

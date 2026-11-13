@@ -91,3 +91,28 @@ Still different, on purpose:
 | `executed_at` | the mock's clock | the vendor's `created_at` |
 | Ids | `mock-quote-1`, ... | vendor ids, passed through |
 | Unknown quote id | `NotFoundError` | `NotFoundError`; an id with characters outside `[A-Za-z0-9_-]` is refused without a request |
+
+
+## Day 13: payouts, cards and webhooks
+
+Tags: VERIFIED = a reference page I read states it; UNVERIFIED = my reading or my choice. Nothing here has run against the real sandbox.
+
+| Area | Endpoint | What the client sends / reads | Idempotency | Tag |
+| --- | --- | --- | --- | --- |
+| Beneficiary, create | `POST /api/v1/beneficiaries/create` | `nickname`, `transfer_methods`, `beneficiary.{type, entity_type, company_name, bank_details.{account_currency, account_name, account_number, bank_country_code}}`; reads `id` | The page documents NO `request_id`. The key maps to a deterministic `nickname` (`tsr-` + sha256[:24]); the client looks that nickname up before creating and after any unknown outcome, and never auto-retries the create. | fields VERIFIED; the nickname trick is my design |
+| Beneficiary, list | `GET /api/v1/beneficiaries?nick_name=` | reads `items[].id` or `beneficiary_id` (the two reference versions differ) | n/a | VERIFIED, with the drift noted |
+| Transfer, create | `POST /api/v1/transfers/create` | `request_id`, `beneficiary_id`, `source_currency`, `transfer_currency`, `transfer_amount` (string), `reason`, `reference`; reads `id`, `status` | `request_id` ("used in the past 7 days are treated as duplicates"); the client looks up by `request_id` first and again after an unknown outcome | VERIFIED; same-currency funding only is my choice (a conversion is a separate action) |
+| Transfer, list | `GET /api/v1/transfers?request_id=` | reads `items[]` | n/a | VERIFIED |
+| Card, create | `POST /api/v1/issuing/cards/create` | `request_id`, `cardholder_id`, `created_by`, `form_factor=VIRTUAL`, `program.purpose`, `authorization_controls.transaction_limits.{currency, limits[{amount (JSON number), interval=MONTHLY}]}` | `request_id` ("requests with the same request_id will be ignored"). What a repeat RETURNS is not documented; no card id in it means `UnknownError`. | request VERIFIED; repeat behaviour UNVERIFIED |
+| Card, update | `POST /api/v1/issuing/cards/{id}/update` | `authorization_controls.transaction_limits` with the whole `limits` array | No `request_id`. An absolute set is naturally repeatable. Unchanged limits are sent back because the page does not say whether the array replaces or merges. | UNVERIFIED (replace vs merge) |
+
+Operator configuration (never a proposal field): `AIRWALLEX_TRANSFER_REASON`, `AIRWALLEX_TRANSFER_METHODS`, bank country per currency (`AIRWALLEX_BANK_COUNTRY_<CUR>`), `AIRWALLEX_CARDHOLDER_ID`, `AIRWALLEX_CARD_CREATED_BY`, `AIRWALLEX_CARD_PURPOSE`. Unset means the call is refused, not defaulted.
+
+### Webhooks
+
+- Headers `x-timestamp` (Unix milliseconds) and `x-signature`. VERIFIED.
+- Signature: hex HMAC-SHA256, keyed with the notification URL's secret, over the timestamp string followed by the raw body. VERIFIED. Compared in constant time, on the bytes as received, before parsing.
+- Timestamp tolerance: the page says to check it but gives no value. **5 minutes is my choice** (`DEFAULT_TOLERANCE`).
+- Events can arrive duplicated and out of order. The event `id` is the dedupe key (primary key of `webhook_events`).
+- Event names: only `payout.transfer.paid` (SETTLED) and `payout.transfer.failed` / `.cancelled` (FAILED) change state. Every other name, and any unknown one, means "in flight" and changes nothing. What each name means is UNVERIFIED beyond the names themselves.
+- The `data.object.id` / `data.object.request_id` payload fields used to find the execution are UNVERIFIED.

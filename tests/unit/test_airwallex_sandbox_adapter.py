@@ -271,8 +271,3 @@ class TestReconciliation:
         rig.conv_list.mock(return_value=send({"has_more": True, "items": []}))
         rig.convert("key-1")  # never found: creates
         assert rig.conv_list.call_count == 10 and rig.conv_create.call_count == 1
-
-
-def test_the_unfinished_methods_say_when_they_arrive(rig: Rig) -> None:
-    with pytest.raises(NotImplementedError, match="Day 13"):
-        rig.port.create_transfer(beneficiary_id="b", amount=usd("1"), reference="r", idempotency_key="k")

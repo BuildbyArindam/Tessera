@@ -19,12 +19,20 @@ from tessera_store import models as m
 from tessera_store.base import Base
 
 NINE_TABLES = {
-    "businesses", "invoices", "payments", "forecasts", "proposals", "policy_decisions", "approvals", "executions",
+    "businesses",
+    "invoices",
+    "payments",
+    "forecasts",
+    "proposals",
+    "policy_decisions",
+    "approvals",
+    "executions",
     "audit_events",
-}  # fmt: skip
+    "webhook_events",
+}  # fmt: skip  (nine from Day 11, plus webhook_events from Day 13)
 
 
-def test_the_migration_creates_exactly_the_nine_tables(engine: sa.Engine) -> None:
+def test_the_migration_creates_exactly_the_expected_tables(engine: sa.Engine) -> None:
     tables = set(sa.inspect(engine).get_table_names()) - {"alembic_version"}
     assert tables == NINE_TABLES
 

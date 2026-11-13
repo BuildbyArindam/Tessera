@@ -87,7 +87,9 @@ def test_backtest_y_true_matches_hand_sum() -> None:
     end = pd.Timestamp(row["origin"]) + pd.Timedelta(weeks=4)
     c = h.cashflows
     expected = c[
-        (c["business_id"] == row["business_id"]) & (c["currency"] == row["currency"])
-        & (c["cash_date"] >= start) & (c["cash_date"] < end + pd.Timedelta(days=1))
+        (c["business_id"] == row["business_id"])
+        & (c["currency"] == row["currency"])
+        & (c["cash_date"] >= start)
+        & (c["cash_date"] < end + pd.Timedelta(days=1))
     ]["amount"].sum()
     assert row["y_true"] == pytest.approx(expected)

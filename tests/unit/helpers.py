@@ -28,14 +28,26 @@ def make_history(seed: int = 1, n_businesses: int = 2) -> History:
                 paid = due + pd.Timedelta(days=int(rng.integers(-3, 12)) + 5 * int(cust == "c3"))
                 paid_val = paid if paid <= end else pd.NaT
                 inv_rows.append(
-                    dict(business_id=bid, invoice_id=f"i{n}", customer_id=cust, currency="USD",
-                         amount=amount, issue_date=issue, due_date=due, paid_date=paid_val)
+                    dict(
+                        business_id=bid,
+                        invoice_id=f"i{n}",
+                        customer_id=cust,
+                        currency="USD",
+                        amount=amount,
+                        issue_date=issue,
+                        due_date=due,
+                        paid_date=paid_val,
+                    )
                 )
                 if paid <= end:
                     cash_rows.append(dict(business_id=bid, currency="USD", cash_date=paid, amount=amount))
             cash_rows.append(
-                dict(business_id=bid, currency="INR", cash_date=START + pd.Timedelta(weeks=w, days=2),
-                     amount=-float(round(rng.uniform(200, 600), 2)))
+                dict(
+                    business_id=bid,
+                    currency="INR",
+                    cash_date=START + pd.Timedelta(weeks=w, days=2),
+                    amount=-float(round(rng.uniform(200, 600), 2)),
+                )
             )
     inv = pd.DataFrame(inv_rows)
     for col in ("issue_date", "due_date", "paid_date"):

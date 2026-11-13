@@ -39,6 +39,7 @@ KNOWN_INVALID_CODES = frozenset(
         "invalid_endpoint",
         "unsupported_currency",
         "validation_error",
+        "validation_failed",  # beneficiary create, documented as a 400
         "invalid_parameter",
         "operation_failed",
         "term_agreement_is_required",
