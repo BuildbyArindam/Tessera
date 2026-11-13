@@ -1,3 +1,4 @@
+from tessera_airwallex._config import CardConfig, PayoutConfig
 from tessera_airwallex._http import SandboxConfig
 from tessera_airwallex.errors import (
     AirwallexError,
@@ -28,12 +29,14 @@ __all__ = [
     "AuthError",
     "BeneficiaryRef",
     "Card",
+    "CardConfig",
     "ConversionResult",
     "IdempotencyConflictError",
     "InsufficientFundsError",
     "InvalidRequestError",
     "MockAirwallex",
     "NotFoundError",
+    "PayoutConfig",
     "QuoteExpiredError",
     "RateLimitedError",
     "SandboxAirwallex",

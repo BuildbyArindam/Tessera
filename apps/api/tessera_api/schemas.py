@@ -25,7 +25,7 @@ def _clean_text(value: str) -> str:
 
 
 Text = Annotated[str, AfterValidator(_clean_text)]
-ProposalStatus = Literal["PENDING_APPROVAL", "APPROVED", "REJECTED", "BLOCKED"]
+ProposalStatus = Literal["PENDING_APPROVAL", "APPROVED", "REJECTED", "BLOCKED", "SUBMITTED", "SETTLED", "FAILED"]
 
 
 class Request(BaseModel):

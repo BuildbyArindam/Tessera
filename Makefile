@@ -34,7 +34,10 @@ migrate:  ## apply database migrations to DATABASE_URL
 api:  ## run the API on :8000 (needs DATABASE_URL and TESSERA_API_KEY; no plan-run provider is attached)
 	$(BIN)/uvicorn --factory tessera_api.main:create_app --port 8000
 
-lint:  ## ruff; import-linter contracts are added on Day 13
+PKG_PATHS := packages/core:packages/airwallex:packages/agent:packages/store:packages/audit:packages/evalkit:apps/api:apps/worker
+
+lint:  ## ruff, then the import-linter architecture contracts (.importlinter)
+	PYTHONPATH=$(PKG_PATHS) $(BIN)/lint-imports
 	$(BIN)/ruff check .
 	$(BIN)/ruff format --check .
 
@@ -44,7 +47,7 @@ fmt:
 
 typecheck:  ## mypy strict on tessera_core, standard on the rest
 	$(BIN)/mypy packages/core/tessera_core packages/airwallex/tessera_airwallex packages/agent/tessera_agent \
-		packages/store/tessera_store packages/audit/tessera_audit apps/api/tessera_api
+		packages/store/tessera_store packages/audit/tessera_audit apps/api/tessera_api apps/worker/tessera_worker
 
 eval:  ## forecast and savings evaluation (Day 17)
 	@echo "eval: not implemented yet (Day 17)"

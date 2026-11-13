@@ -91,6 +91,9 @@ class FakeAirwallex:
         r.get(path__regex=r"^/api/v1/fx/quotes/[^/]+$", host=HOST).mock(side_effect=self._route(self._quote_get))
         r.post(path="/api/v1/fx/conversions/create", host=HOST).mock(side_effect=self._route(self._conv_create))
         r.get(path="/api/v1/fx/conversions", host=HOST).mock(side_effect=self._route(self._conv_list))
+        from fake_airwallex_payouts import FakePayouts  # local import: that module imports this one
+
+        self.payouts = FakePayouts(self, router)
 
     # ------------------------------------------------------------------ plumbing
     def inject(self, method: str, path: str, *, times: int = 1, status: int | None = None, **kw: Any) -> None:

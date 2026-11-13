@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from tessera_audit import EVENT_TYPE_VALUES, AuditEventType
-from tessera_core.domain import ActionType, Currency, InvoiceStatus, Verdict
+from tessera_core.domain import ActionType, Currency, ExecutionState, InvoiceStatus, Verdict
 from tessera_core.domain.entities import PaymentDirection
 from tessera_store import models as m
 
@@ -19,6 +19,13 @@ def test_database_value_lists_match_the_domain_enums() -> None:
     assert m.INVOICE_STATUSES == values(InvoiceStatus)
     assert m.PAYMENT_DIRECTIONS == values(PaymentDirection)
     assert EVENT_TYPE_VALUES == values(AuditEventType)
+
+
+def test_proposal_and_execution_statuses_match_the_lifecycle() -> None:
+    from tessera_core.domain.lifecycle import PERSISTED_ACTION_STATES
+
+    assert set(m.PROPOSAL_STATUSES) == set(PERSISTED_ACTION_STATES)
+    assert m.EXECUTION_STATUSES == values(ExecutionState)
 
 
 def test_the_brief_lists_ten_event_types() -> None:

@@ -13,6 +13,7 @@ from fastapi import APIRouter, Depends, HTTPException, Path, Query
 from sqlalchemy.orm import Session
 from tessera_audit import AuditEventType, AuditLog
 from tessera_audit import payloads as audit_payloads
+from tessera_core.domain import IllegalTransitionError
 from tessera_store import repo
 
 from tessera_api.deps import ACTOR, AppContext, get_ctx, get_session, require_api_key
@@ -46,14 +47,17 @@ def _decide(
         raise HTTPException(status_code=409, detail=f"proposal is {proposal.status}, not PENDING_APPROVAL")
     note = body.note if body else None
     from_status = proposal.status
-    repo.record_human_decision(
-        session,
-        proposal,
-        decision="APPROVED" if approve else "REJECTED",
-        actor=ACTOR,
-        note=note,
-        new_status="APPROVED" if approve else "REJECTED",
-    )
+    try:
+        repo.record_human_decision(
+            session,
+            proposal,
+            decision="APPROVED" if approve else "REJECTED",
+            actor=ACTOR,
+            note=note,
+            new_status="APPROVED" if approve else "REJECTED",
+        )
+    except IllegalTransitionError as exc:  # the lifecycle table is the last word, even if the check above is edited
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
     AuditLog(session, ctx.clock).append(
         AuditEventType.APPROVED if approve else AuditEventType.REJECTED,
         audit_payloads.human_decision_payload(proposal_id, actor=ACTOR, note=note, from_status=from_status),

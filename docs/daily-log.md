@@ -303,3 +303,30 @@ Not fixed or not claimed:
 - Secrets: a DEBUG run with sentinel API key, client id, account number, IBAN and token, against a server that echoes them back in an error message, left 0 occurrences in 33 log lines and 6 exception texts. Static grep of source, scripts and tracked files: no key values (the `AIRWALLEX_API_KEY=...` lines are placeholders). Account numbers only appear in a request body in a unit test, where the log shows `[REDACTED]`. The sandbox client does not send account numbers yet (beneficiaries are Day 13).
 - Mock vs sandbox: ran 14 edge cases through both. Found and fixed three differences (expiry boundary, whitespace-only key, sub-cent amount), each with a contract test that fails when the fix is reverted. Remaining differences are listed in `docs/airwallex-notes.md`; four methods are unimplemented in the client until Day 13.
 - `make test`: 982 passed, 18 skipped.
+
+
+## Day 13: Airwallex adapter part 2, webhooks, worker loop (2026-11-13)
+
+Built: `create_beneficiary`, `create_transfer`, `create_card`, `set_card_limits` in the sandbox adapter; `tessera_airwallex.webhooks` (pure signature, freshness and event parsing); `tessera_core.domain.lifecycle` (table-driven state machine); migration 0002 (SUBMITTED/SETTLED/FAILED proposals, one execution per proposal, `webhook_events`); `apps/worker` (`gate`, `dispatch`, `submit`, `outcomes`, `webhooks`, `loop`); four import-linter contracts in `.importlinter`, run first by `make lint`.
+
+Design in one paragraph: approval never executes. Before any send the worker re-runs policy with fresh context (phase "execution"), stores the execution row with its idempotency key and commits, then calls the port with that key, then records the outcome. A crash anywhere after the key is stored leaves a PENDING row that the next cycle replays with the same key.
+
+Assumptions (the simplest option, per the working style):
+- One execution per proposal (unique `proposal_id`). Key = `tsr-` + sha256(`execute:<proposal id>`)[:40]. A FAILED execution is not retried automatically; a person re-proposes.
+- Fresh-check rule: BLOCK always stops, even after a human approval. A fresh ESCALATE after a human approval proceeds only if the ruleset hash is the same and every escalating rule also escalated when the human looked (`gate.py`); otherwise it goes back to PENDING_APPROVAL. Without this rule a human-approved ESCALATE could never run.
+- A PENDING execution whose fresh check no longer passes is HELD for a person, never marked FAILED (the first call may have gone through). Same for one older than 24 hours (inside the vendor's 7-day duplicate window). Nothing is sent in either case.
+- The second approval of a re-escalated proposal replaces the first approval row; the audit chain keeps both.
+- PAY_SUPPLIER with `from_currency != currency` FAILS before sending (`cross_currency_payout_unsupported`): the port funds same-currency only and a conversion is its own judged action. A beneficiary the directory cannot map FAILS (`beneficiary_not_in_directory`).
+- TOPUP_CARD raises the monthly limit by the amount (or creates the card). The target limit is saved before the call so a replay never adds twice. A CONVERT saves its quote id first, so a restart executes the same quote.
+- Webhook freshness window 5 minutes (my choice, not documented). Webhooks for a still-PENDING execution are stored `unmatched` and applied by the worker's reconcile step.
+- The worker imports `tessera_api.planning` (one implementation of planning + policy). Moving it to a shared package is a cleanup for later. `_decide` was renamed `decide_proposal`.
+
+Not done / not claimed:
+- NOTHING RAN AGAINST THE REAL SANDBOX (no credentials, host unreachable). Every UNVERIFIED row in `docs/airwallex-notes.md` still is.
+- `python -m tessera_worker` starts with NO world provider and an EMPTY vendor directory, so it neither plans nor executes until Day 14 supplies them (the logs say so). Ingest and forecast are injected hooks with no default; the loop and its tests exercise them through the planner, fake world and mock port only.
+- Beneficiary creation is not called by the worker: bank details come from onboarding, never from a proposal.
+- Webhook server is run separately: `uvicorn --factory tessera_worker.webhooks:create_app`. No docker-compose service yet.
+- Pre-existing failures I did not touch: `make typecheck` reports 3 errors in `tessera_core/forecast/{target,features}.py`; `ruff check .` reports 23 errors and `ruff format --check` 17 files in older evalkit/scripts/core files (e.g. a duplicated tail in `forecast_eval.py`). The Day 13 files are clean.
+- Not committed or pushed: `.claude/settings.json` denies git writes, and GitHub access for this session was refused.
+
+Verification: `make test` 1087 passed, 18 skipped; integration (`TESSERA_REQUIRE_DB=1`) 156 passed (was 131); import-linter 4 kept; planted violations (agent and api importing airwallex, core importing sqlalchemy) break 3 contracts. Mutation checks, files restored after each: gate approving everything (9 tests fail), key not committed before the call (8 fail), no timestamp check (1 fails).

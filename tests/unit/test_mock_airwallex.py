@@ -71,15 +71,10 @@ class TestQuotesAndConversion:
 
         # total system value at mid (in USD) is unchanged up to one cent of rounding
         def total_usd() -> Decimal:
-            v = sum(
-                (balance(mock, c) + mock.fees_collected[c].amount) * mock.usd_value(c)
-                for c in Currency
-            )
+            v = sum((balance(mock, c) + mock.fees_collected[c].amount) * mock.usd_value(c) for c in Currency)
             return Decimal(v)
 
-        assert abs(total_usd() - (Decimal("10000") + Decimal("5000") * Decimal("1.08"))) < Decimal(
-            "0.02"
-        )
+        assert abs(total_usd() - (Decimal("10000") + Decimal("5000") * Decimal("1.08"))) < Decimal("0.02")
 
     def test_zero_spread_gives_zero_fee(self) -> None:
         m = MockAirwallex({USD: "100"}, spread_bps=0)
@@ -91,9 +86,7 @@ class TestQuotesAndConversion:
         q = mock.create_fx_quote(sell=money("999999"), buy_currency=EUR)
         with pytest.raises(InsufficientFundsError):
             mock.execute_conversion(quote_id=q.quote_id, idempotency_key="k")
-        assert balance(mock, USD) == Decimal("10000.00") and balance(mock, EUR) == Decimal(
-            "5000.00"
-        )
+        assert balance(mock, USD) == Decimal("10000.00") and balance(mock, EUR) == Decimal("5000.00")
 
     def test_expired_quote_rejected(self) -> None:
         clock = Clock()
@@ -111,9 +104,7 @@ class TestQuotesAndConversion:
         with pytest.raises(InvalidRequestError):
             mock.create_fx_quote(sell=money("0"), buy_currency=EUR)
 
-    def test_a_quote_cannot_be_executed_twice_under_different_keys(
-        self, mock: MockAirwallex
-    ) -> None:
+    def test_a_quote_cannot_be_executed_twice_under_different_keys(self, mock: MockAirwallex) -> None:
         q = mock.create_fx_quote(sell=money("100"), buy_currency=EUR)
         mock.execute_conversion(quote_id=q.quote_id, idempotency_key="a")
         with pytest.raises(InvalidRequestError):
@@ -201,9 +192,7 @@ class TestBeneficiariesAndTransfers:
                 idempotency_key="t1",
             )
         with pytest.raises(InvalidRequestError):  # wrong currency
-            m.create_transfer(
-                beneficiary_id=bid, amount=money("1", USD), reference="r", idempotency_key="t2"
-            )
+            m.create_transfer(beneficiary_id=bid, amount=money("1", USD), reference="r", idempotency_key="t2")
         with pytest.raises(InsufficientFundsError):
             m.create_transfer(
                 beneficiary_id=bid,
@@ -217,12 +206,8 @@ class TestBeneficiariesAndTransfers:
 class TestCards:
     def test_create_and_update_limit_idempotently(self, mock: MockAirwallex) -> None:
         card = mock.create_card(label="SaaS", monthly_limit=money("100"), idempotency_key="c1")
-        assert (
-            mock.create_card(label="SaaS", monthly_limit=money("100"), idempotency_key="c1") == card
-        )
-        raised = mock.set_card_limits(
-            card_id=card.card_id, monthly_limit=money("250"), idempotency_key="c2"
-        )
+        assert mock.create_card(label="SaaS", monthly_limit=money("100"), idempotency_key="c1") == card
+        raised = mock.set_card_limits(card_id=card.card_id, monthly_limit=money("250"), idempotency_key="c2")
         assert raised.monthly_limit == money("250") and raised.card_id == card.card_id
 
     def test_card_validation(self, mock: MockAirwallex) -> None:
@@ -232,9 +217,7 @@ class TestCards:
             mock.set_card_limits(card_id="ghost", monthly_limit=money("1"), idempotency_key="c2")
         card = mock.create_card(label="x", monthly_limit=money("10"), idempotency_key="c3")
         with pytest.raises(InvalidRequestError):  # currency change
-            mock.set_card_limits(
-                card_id=card.card_id, monthly_limit=money("10", EUR), idempotency_key="c4"
-            )
+            mock.set_card_limits(card_id=card.card_id, monthly_limit=money("10", EUR), idempotency_key="c4")
 
 
 def test_spread_bps_validated() -> None:

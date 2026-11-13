@@ -1,0 +1,73 @@
+# Architecture contracts (Day 13). Run by `make lint`. The packages are not installed, so lint-imports is run with
+# PYTHONPATH set to every package root (see the Makefile).
+
+[importlinter]
+root_packages =
+    tessera_core
+    tessera_airwallex
+    tessera_agent
+    tessera_store
+    tessera_audit
+    tessera_evalkit
+    tessera_api
+    tessera_worker
+include_external_packages = True
+
+[importlinter:contract:core-is-pure]
+name = tessera_core imports no other Tessera package and no network or database library
+type = forbidden
+source_modules =
+    tessera_core
+forbidden_modules =
+    tessera_airwallex
+    tessera_agent
+    tessera_store
+    tessera_audit
+    tessera_evalkit
+    tessera_api
+    tessera_worker
+    sqlalchemy
+    alembic
+    psycopg
+    psycopg2
+    asyncpg
+    httpx
+    requests
+    aiohttp
+    urllib3
+    fastapi
+    starlette
+
+[importlinter:contract:agent-cannot-reach-the-vendor]
+name = tessera_agent cannot import tessera_airwallex (the LLM side never touches execution)
+type = forbidden
+source_modules =
+    tessera_agent
+forbidden_modules =
+    tessera_airwallex
+
+[importlinter:contract:only-the-worker-imports-airwallex]
+name = only apps/worker (tessera_worker) may import tessera_airwallex
+type = forbidden
+source_modules =
+    tessera_core
+    tessera_agent
+    tessera_store
+    tessera_audit
+    tessera_evalkit
+    tessera_api
+forbidden_modules =
+    tessera_airwallex
+
+[importlinter:contract:the-adapter-stands-alone]
+name = tessera_airwallex depends only on tessera_core
+type = forbidden
+source_modules =
+    tessera_airwallex
+forbidden_modules =
+    tessera_agent
+    tessera_store
+    tessera_audit
+    tessera_evalkit
+    tessera_api
+    tessera_worker

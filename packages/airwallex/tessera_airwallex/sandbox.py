@@ -1,5 +1,5 @@
-"""Real Airwallex sandbox adapter. Day 12 implements balances, FX quotes and conversions;
-beneficiaries, transfers and cards arrive on Day 13.
+"""Real Airwallex sandbox adapter. Balances, FX quotes and conversions live here (Day 12); beneficiaries and
+transfers are in _payouts.py and virtual cards in _cards.py (Day 13), mixed into the class below.
 
 Every endpoint and field used here is recorded in docs/airwallex-notes.md with its source.
 
@@ -12,20 +12,23 @@ only documents that a repeated `request_id` is "rejected", so this adapter:
   3. after an unknown outcome or an unclassifiable 4xx on create, looks it up again.
 """
 
-import hashlib
 import re
 from collections.abc import Callable
 from datetime import UTC, datetime
-from decimal import Decimal, InvalidOperation
+from decimal import Decimal
 from typing import Any
 from urllib.parse import quote as url_quote
 
-from pydantic import SecretStr
 from tessera_core.domain import Balance, Currency, FxQuote, Money
 
+from tessera_airwallex._cards import CardsMixin
+from tessera_airwallex._config import CardConfig, PayoutConfig
 from tessera_airwallex._errormap import needs_reconcile
 from tessera_airwallex._http import SandboxConfig, SandboxHttp
+from tessera_airwallex._payouts import PayoutsMixin
 from tessera_airwallex._timeparse import parse_timestamp
+from tessera_airwallex._values import MAX_LIST_PAGES, close, dec, money
+from tessera_airwallex._values import request_id_for as request_id_for  # re-exported: tests and the recorder use it
 from tessera_airwallex.errors import (
     AirwallexError,
     IdempotencyConflictError,
@@ -34,7 +37,7 @@ from tessera_airwallex.errors import (
     QuoteExpiredError,
     UnknownError,
 )
-from tessera_airwallex.models import BeneficiaryRef, Card, ConversionResult, Transfer
+from tessera_airwallex.models import ConversionResult
 from tessera_airwallex.port import AirwallexPort
 
 BALANCES_PATH = "/api/v1/balances/current"
@@ -43,41 +46,10 @@ QUOTE_PATH = "/api/v1/fx/quotes/{quote_id}"
 CONVERSION_CREATE_PATH = "/api/v1/fx/conversions/create"
 CONVERSIONS_PATH = "/api/v1/fx/conversions"
 
-_PLAIN_KEY = re.compile(r"^[A-Za-z0-9_-]{1,64}$")
 _QUOTE_ID = re.compile(r"^[A-Za-z0-9_-]{1,128}$")
-_TOLERANCE = Decimal("0.01")  # amounts are 2 dp, so sell * rate may differ from buy by a cent
-_MAX_LIST_PAGES = 10
-_DAY13 = "arrives on Day 13"
 
 
-def request_id_for(idempotency_key: str) -> str:
-    """Deterministic Airwallex `request_id` (max 64 chars) for a port idempotency key."""
-    if not idempotency_key or not idempotency_key.strip():
-        raise InvalidRequestError("idempotency_key must be non-empty")
-    if _PLAIN_KEY.match(idempotency_key):
-        return idempotency_key
-    return hashlib.sha256(idempotency_key.encode()).hexdigest()
-
-
-def _dec(value: object) -> Decimal:
-    """Decimal from a parsed JSON number or string. Floats never reach here (see _json)."""
-    if isinstance(value, bool | float) or value is None:
-        raise ValueError("expected a Decimal, int or str amount")
-    try:
-        return Decimal(value) if isinstance(value, int | str) else Decimal(str(value))
-    except InvalidOperation as exc:
-        raise ValueError("invalid decimal") from exc
-
-
-def _close(a: Decimal, b: Decimal) -> bool:
-    return abs(a - b) <= _TOLERANCE + abs(b) * Decimal("1e-7")
-
-
-def _money(data: dict[str, Any], amount_key: str, currency_key: str) -> Money:
-    return Money(amount=_dec(data[amount_key]), currency=Currency(data[currency_key]))
-
-
-class SandboxAirwallex(AirwallexPort):
+class SandboxAirwallex(PayoutsMixin, CardsMixin, AirwallexPort):
     def __init__(
         self,
         config: SandboxConfig | None = None,
@@ -85,10 +57,14 @@ class SandboxAirwallex(AirwallexPort):
         http: SandboxHttp | None = None,
         clock: Callable[[], datetime] | None = None,
         quote_validity: str = "MIN_1",
+        payouts: PayoutConfig | None = None,
+        cards: CardConfig | None = None,
     ) -> None:
         self._clock = clock or (lambda: datetime.now(UTC))
         self._http = http or SandboxHttp(config or SandboxConfig.from_env(), clock=self._clock)
         self._validity = quote_validity
+        self._payouts = payouts or PayoutConfig.from_env()
+        self._cards = cards or CardConfig.from_env()
 
     # ------------------------------------------------------------------ reads
     def get_balances(self) -> list[Balance]:
@@ -104,7 +80,7 @@ class SandboxAirwallex(AirwallexPort):
                     currency = Currency(item["currency"])
                 except ValueError:
                     continue  # a currency Tessera does not trade
-                totals[currency] += _dec(item["available_amount"])
+                totals[currency] += dec(item["available_amount"])
             return [Balance(currency=c, available=Money(amount=a, currency=c)) for c, a in totals.items()]
         except (KeyError, TypeError, AttributeError, ValueError) as exc:
             raise UnknownError("malformed balances response") from exc
@@ -158,28 +134,14 @@ class SandboxAirwallex(AirwallexPort):
             return self._replayed(found, quote_id)
         return self._result_from(data, quote_id)
 
-    def create_beneficiary(
-        self, *, name: str, currency: Currency, account_identifier: SecretStr, idempotency_key: str
-    ) -> BeneficiaryRef:
-        raise NotImplementedError(f"create_beneficiary {_DAY13}")
-
-    def create_transfer(self, *, beneficiary_id: str, amount: Money, reference: str, idempotency_key: str) -> Transfer:
-        raise NotImplementedError(f"create_transfer {_DAY13}")
-
-    def create_card(self, *, label: str, monthly_limit: Money, idempotency_key: str) -> Card:
-        raise NotImplementedError(f"create_card {_DAY13}")
-
-    def set_card_limits(self, *, card_id: str, monthly_limit: Money, idempotency_key: str) -> Card:
-        raise NotImplementedError(f"set_card_limits {_DAY13}")
-
     # ------------------------------------------------------------------ parsing
     def _quote_from(self, data: Any) -> FxQuote:
         try:
-            sell = _money(data, "sell_amount", "sell_currency")
-            buy = _money(data, "buy_amount", "buy_currency")
+            sell = money(data, "sell_amount", "sell_currency")
+            buy = money(data, "buy_amount", "buy_currency")
             if not buy.is_positive():
                 raise InvalidRequestError("amount too small to convert")
-            rate = self._consistent_rate(_dec(data["client_rate"]), sell, buy)
+            rate = self._consistent_rate(dec(data["client_rate"]), sell, buy)
             return FxQuote(
                 quote_id=str(data["quote_id"]),
                 sell=sell,
@@ -199,10 +161,10 @@ class SandboxAirwallex(AirwallexPort):
         """
         if rate <= 0:
             raise ValueError("rate must be positive")
-        if _close(sell.amount * rate, buy.amount):
+        if close(sell.amount * rate, buy.amount):
             return rate
         inverse = (1 / rate).quantize(Decimal("1e-10"))
-        if _close(sell.amount * inverse, buy.amount):
+        if close(sell.amount * inverse, buy.amount):
             return inverse
         raise ValueError("client_rate does not match the quoted amounts")
 
@@ -211,8 +173,8 @@ class SandboxAirwallex(AirwallexPort):
             return ConversionResult(
                 conversion_id=str(data["conversion_id"]),
                 quote_id=str(data.get("quote_id") or requested_quote_id),
-                sold=_money(data, "sell_amount", "sell_currency"),
-                bought=_money(data, "buy_amount", "buy_currency"),
+                sold=money(data, "sell_amount", "sell_currency"),
+                bought=money(data, "buy_amount", "buy_currency"),
                 executed_at=parse_timestamp(data["created_at"]),
             )
         except (KeyError, TypeError, AttributeError, ValueError) as exc:
@@ -228,7 +190,7 @@ class SandboxAirwallex(AirwallexPort):
 
     def _find_conversion(self, request_id: str) -> dict[str, Any] | None:
         """The conversion created with this request_id, if any. Filtering is re-checked client-side."""
-        for page in range(_MAX_LIST_PAGES):
+        for page in range(MAX_LIST_PAGES):
             params: dict[str, str | int] = {"request_id": request_id, "page_num": page, "page_size": 100}
             data = self._http.request("GET", CONVERSIONS_PATH, params=params)
             if not isinstance(data, dict) or not isinstance(data.get("items"), list):
