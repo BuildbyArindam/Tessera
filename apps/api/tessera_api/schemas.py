@@ -5,7 +5,7 @@ from __future__ import annotations
 from datetime import date, datetime
 from typing import Annotated, Any, Literal
 
-from pydantic import AfterValidator, BaseModel, ConfigDict, JsonValue, StringConstraints, model_validator
+from pydantic import AfterValidator, BaseModel, ConfigDict, Field, JsonValue, StringConstraints, model_validator
 from tessera_core.domain import Currency, Invoice, InvoiceStatus, Money
 
 IDENT_PATTERN = r"^[A-Za-z0-9][A-Za-z0-9._:-]*$"
@@ -159,3 +159,68 @@ class ChainStatusOut(BaseModel):
     head_hash: str | None
     broken_seq: int | None
     reason: str | None
+
+
+# ---- autonomy -------------------------------------------------------------------------------------
+LevelName = Literal["L0", "L1", "L2", "L3"]
+
+
+class CriterionOut(BaseModel):
+    name: str
+    passed: bool
+    observed: str
+    required: str
+
+
+class AssessmentOut(BaseModel):
+    """What the controller would do with the evidence right now. Read-only: asking applies nothing."""
+
+    kind: Literal["NONE", "PROPOSE_PROMOTION", "DEMOTE"]
+    from_level: LevelName
+    to_level: LevelName
+    triggers: list[str]
+    criteria: list[CriterionOut]
+    eligible: bool
+    config_hash: str
+    assessed_at: datetime
+
+
+class PromotionOut(BaseModel):
+    id: int
+    from_level: LevelName
+    to_level: LevelName
+    status: Literal["PENDING", "CONFIRMED", "REJECTED", "CANCELLED"]
+    verdict: Literal["ESCALATE"] = "ESCALATE"  # a promotion is never automatic: a person must confirm it
+    proposed_at: datetime
+    decided_at: datetime | None
+    actor: str | None
+    note: str | None
+
+
+class AutonomyOut(BaseModel):
+    level: LevelName
+    since: datetime
+    pending_promotion: PromotionOut | None
+    evidence_available: bool  # false: no evidence source is configured, so nothing can be promoted or confirmed
+    assessment: AssessmentOut | None
+
+
+class ConfirmPromotionIn(Request):
+    action: Literal["confirm_promotion"]
+    promotion_id: int
+    note: Annotated[Text, StringConstraints(max_length=500)] | None = None
+
+
+class RejectPromotionIn(Request):
+    action: Literal["reject_promotion"]
+    promotion_id: int
+    note: Annotated[Text, StringConstraints(max_length=500)] | None = None
+
+
+class DemoteIn(Request):
+    action: Literal["demote"]
+    to_level: LevelName
+    note: Annotated[Text, StringConstraints(max_length=500)] | None = None
+
+
+AutonomyAction = Annotated[ConfirmPromotionIn | RejectPromotionIn | DemoteIn, Field(discriminator="action")]

@@ -33,6 +33,7 @@ def texts(**overrides: str) -> dict[str, str]:
 def test_shipped_rules_load_and_register() -> None:
     rs = load_ruleset(DEFAULT_RULES_DIR)
     assert [r.rule_id for r in rs.rules] == [
+        "autonomy_level_gate",
         "beneficiary_allowlist",
         "card_limit_cap",
         "currency_concentration_cap",

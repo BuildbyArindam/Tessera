@@ -16,8 +16,10 @@ from fastapi import Depends, HTTPException, Request, Security
 from fastapi.security import APIKeyHeader
 from sqlalchemy.orm import Session, sessionmaker
 from tessera_agent import LLMClient
+from tessera_core.autonomy import AutonomyController
 from tessera_core.policy import Ruleset
 
+from tessera_api.autonomy_service import AutonomyInputsProvider
 from tessera_api.planning import WorldProvider
 
 MIN_API_KEY_LENGTH = 16
@@ -53,7 +55,10 @@ class AppContext:
     ruleset: Ruleset
     llm_factory: Callable[[], LLMClient]
     clock: Callable[[], datetime]
+    autonomy_controller: AutonomyController
     world_provider: WorldProvider | None = None
+    # Builds the controller's evidence. None until one is configured: then nothing is promoted or confirmed.
+    autonomy_inputs: AutonomyInputsProvider | None = None
 
 
 def get_ctx(request: Request) -> AppContext:

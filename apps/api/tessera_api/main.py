@@ -2,6 +2,7 @@
 
 Run it with:  uvicorn --factory tessera_api.main:create_app
 Needs DATABASE_URL and TESSERA_API_KEY (at least 16 characters) in the environment.
+`autonomy_inputs` (the evidence source for the autonomy dial) is optional; without it nothing can be promoted.
 """
 
 from __future__ import annotations
@@ -15,12 +16,14 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse, Response
 from sqlalchemy.exc import OperationalError
 from tessera_agent import LLMClient, llm_from_env
+from tessera_core.autonomy import AutonomyConfig, AutonomyController, load_autonomy_config
 from tessera_core.policy import Ruleset, load_ruleset
 from tessera_store import make_engine, make_session_factory
 
+from tessera_api.autonomy_service import AutonomyInputsProvider
 from tessera_api.deps import API_KEY_HEADER, AppContext, Settings, key_is_valid
 from tessera_api.planning import WorldProvider
-from tessera_api.routes import audit, forecasts, invoices, plan, proposals
+from tessera_api.routes import audit, autonomy, forecasts, invoices, plan, proposals
 
 PUBLIC_PATHS = frozenset({"/docs", "/redoc", "/openapi.json", "/docs/oauth2-redirect"})
 
@@ -32,6 +35,8 @@ def create_app(
     llm_factory: Callable[[], LLMClient] | None = None,
     ruleset: Ruleset | None = None,
     clock: Callable[[], datetime] | None = None,
+    autonomy_config: AutonomyConfig | None = None,
+    autonomy_inputs: AutonomyInputsProvider | None = None,
 ) -> FastAPI:
     settings = settings or Settings.from_env()
     engine = make_engine(settings.database_url)
@@ -42,6 +47,8 @@ def create_app(
         llm_factory=llm_factory or llm_from_env,
         clock=clock or (lambda: datetime.now(UTC)),
         world_provider=world_provider,
+        autonomy_controller=AutonomyController(autonomy_config or load_autonomy_config()),
+        autonomy_inputs=autonomy_inputs,
     )
 
     @asynccontextmanager
@@ -85,6 +92,6 @@ def create_app(
     async def _database_down(_: Request, __: OperationalError) -> JSONResponse:
         return JSONResponse(status_code=503, content={"detail": "database unavailable"})
 
-    for router in (invoices.router, forecasts.router, plan.router, proposals.router, audit.router):
+    for router in (invoices.router, forecasts.router, plan.router, proposals.router, audit.router, autonomy.router):
         app.include_router(router)
     return app

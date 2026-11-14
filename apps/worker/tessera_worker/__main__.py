@@ -44,6 +44,7 @@ def main() -> None:
         SandboxAirwallex() if os.environ.get("TESSERA_AIRWALLEX_ADAPTER") == "sandbox" else MockAirwallex()
     )
     log.warning("no world provider is configured: the worker will not plan or execute until one is (Day 14)")
+    log.warning("no autonomy inputs provider is configured: the dial will not move on its own (it stays at its level)")
     deps = LoopDeps(
         exec=ExecDeps(
             session_factory=make_session_factory(make_engine(settings.database_url)),

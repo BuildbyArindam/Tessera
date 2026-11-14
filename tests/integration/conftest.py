@@ -20,9 +20,10 @@ import sqlalchemy as sa
 from alembic import command
 from alembic.config import Config
 from fastapi.testclient import TestClient
-from it_helpers import API_KEY, HEADERS, ROOT, T0
+from it_helpers import API_KEY, HEADERS, ROOT, T0, set_stored_level
 from sqlalchemy.orm import Session, sessionmaker
 from tessera_agent import LLMClient, LLMError
+from tessera_api.autonomy_service import AutonomyInputsProvider
 from tessera_api.deps import Settings
 from tessera_api.main import create_app
 from tessera_api.planning import WorldProvider
@@ -91,7 +92,14 @@ def new_db(template_db: str) -> Iterator[Callable[[], str]]:
 
 @pytest.fixture
 def db_url(new_db: Callable[[], str]) -> str:
-    return new_db()
+    """A fresh database at autonomy level L3, so tests of planning and execution test what they are about.
+
+    The migrated default is L0 (advise-only, covered in test_autonomy_integration.py). Tests of the dial itself
+    call `new_db()` and set the level they need explicitly.
+    """
+    url = new_db()
+    set_stored_level(url, 3)
+    return url
 
 
 @pytest.fixture
@@ -127,11 +135,13 @@ def make_client(db_url: str) -> Iterator[Callable[..., TestClient]]:
         llm: Callable[[], LLMClient] = _llm_not_configured,
         database_url: str | None = None,
         authenticated: bool = True,
+        autonomy_inputs: AutonomyInputsProvider | None = None,
     ) -> TestClient:
         ticks = iter(range(10_000))
         app = create_app(
             Settings(database_url=database_url or db_url, api_key=API_KEY),
             world_provider=world_provider,
+            autonomy_inputs=autonomy_inputs,
             llm_factory=llm,
             clock=lambda: T0 + timedelta(seconds=next(ticks)),  # strictly increasing, so audit order is unambiguous
         )

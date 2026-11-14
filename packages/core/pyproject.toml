@@ -13,4 +13,4 @@ dependencies = ["pydantic>=2.7", "numpy>=1.26", "pandas>=2.1", "scikit-learn>=1.
 include = ["tessera_core*"]
 
 [tool.setuptools.package-data]
-tessera_core = ["py.typed", "policy/rules/*.yaml"]
+tessera_core = ["py.typed", "policy/rules/*.yaml", "autonomy/*.yaml"]

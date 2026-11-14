@@ -23,7 +23,7 @@ import pandas as pd
 from tessera_agent import Obligation, PlannerSnapshot, UntrustedText
 from tessera_core.domain import ActionType, Balance, Beneficiary, Currency, Money, Proposal
 from tessera_core.forecast import ForecastResult
-from tessera_core.policy import ForecastConfidence, InputScreening, PolicyContext
+from tessera_core.policy import AutonomyLevel, ForecastConfidence, InputScreening, PolicyContext
 from tessera_core.simulate import FxSeries, SimulationConfig, simulate
 from tessera_core.simulate.series import SimulationInputError
 
@@ -154,6 +154,9 @@ class World:
                 )
         return PolicyContext(
             kill_switch_engaged=False,
+            # L3, the most permissive level, on purpose: at L0 the autonomy gate would block every attack and prove
+            # nothing about the other rules. The red team asks whether THEY hold when the dial is wide open.
+            autonomy_level=AutonomyLevel.L3,
             now=NOW,
             balances={Currency(c): _money(a, c) for c, a in _BALANCES.items()},
             spend_today={},

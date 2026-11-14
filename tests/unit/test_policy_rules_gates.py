@@ -251,8 +251,10 @@ def test_clean_proposals_are_approved_by_the_whole_shipped_ruleset(name: str) ->
 
 
 @pytest.mark.parametrize("action", [ActionType.HOLD, ActionType.FLAG_INVOICE])
-def test_actions_that_move_no_money_need_only_the_kill_switch_context(action: ActionType) -> None:
-    from tessera_core.policy import PolicyContext
+def test_actions_that_move_no_money_need_only_the_kill_switch_and_autonomy_level_context(action: ActionType) -> None:
+    from tessera_core.policy import AutonomyLevel, PolicyContext
 
-    d = evaluate(make_proposal(action), PolicyContext(kill_switch_engaged=False), load_ruleset())
+    # Day 14: the autonomy gate always needs the level (no level, no decision). L1 allows both of these actions.
+    context = PolicyContext(kill_switch_engaged=False, autonomy_level=AutonomyLevel.L1)
+    d = evaluate(make_proposal(action), context, load_ruleset())
     assert d.verdict is Verdict.APPROVE, d.reasons

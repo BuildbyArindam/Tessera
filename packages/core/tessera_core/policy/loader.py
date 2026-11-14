@@ -45,11 +45,16 @@ def _construct_unique_mapping(loader: _StrictLoader, node: yaml.MappingNode, dee
 _StrictLoader.add_constructor(yaml.resolver.BaseResolver.DEFAULT_MAPPING_TAG, _construct_unique_mapping)
 
 
-def parse_rule_yaml(text: str, source: str) -> RuleSpec:
+def strict_yaml_load(text: str, source: str) -> object:
+    """Parse YAML with the strict loader (duplicate keys are errors). Other config files share this behaviour."""
     try:
-        data = yaml.load(text, Loader=_StrictLoader)  # noqa: S506 - _StrictLoader is a SafeLoader
+        return yaml.load(text, Loader=_StrictLoader)  # noqa: S506 - _StrictLoader is a SafeLoader
     except yaml.YAMLError as exc:
         raise RulesetError(f"{source}: invalid YAML: {exc}") from None
+
+
+def parse_rule_yaml(text: str, source: str) -> RuleSpec:
+    data = strict_yaml_load(text, source)
     if not isinstance(data, dict):
         raise RulesetError(f"{source}: a rule file must contain a single mapping")
     try:

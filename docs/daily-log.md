@@ -330,3 +330,32 @@ Not done / not claimed:
 - Not committed or pushed: `.claude/settings.json` denies git writes, and GitHub access for this session was refused.
 
 Verification: `make test` 1087 passed, 18 skipped; integration (`TESSERA_REQUIRE_DB=1`) 156 passed (was 131); import-linter 4 kept; planted violations (agent and api importing airwallex, core importing sqlalchemy) break 3 contracts. Mutation checks, files restored after each: gate approving everything (9 tests fail), key not committed before the call (8 fail), no timestamp check (1 fails).
+
+## Day 14: The autonomy dial (2026-11-14)
+
+**Built.** `tessera_core.autonomy` (pure: config, evidence, stats, `AutonomyController`, shadow detection); the
+`autonomy_level_gate` rule and its YAML table; `autonomy/autonomy.yaml` for every threshold; `autonomy_state` and
+`autonomy_promotions` tables (migration 0003); `autonomy_service` (shared by the worker and the API); `GET/POST /autonomy`;
+worker autonomy step at the start of each cycle; `autonomy_changed` audit events; `shadow` flag on `policy_decision`.
+
+**Assumptions (simplest option chosen).**
+- The stored level (DB, default L0) is the only authority; it is overlaid onto the policy context at decision and at execution.
+- Demotion triggers: any violation after the level began (down to L0), kill switch (to L0), coverage collapse (one level).
+- Evidence only counts if dated after the current level began, so a demotion cannot re-fire on its own evidence.
+- Promotion moves one level at a time; one pending promotion at a time; confirming re-assesses the evidence first.
+- Lower confidence bound = seeded percentile bootstrap in Decimal.
+- Caps in the level table are illustrative, like the other limits.
+- An unavailable evidence source fails closed: nothing is promoted or confirmed; demotion by operator still works.
+
+**Not done.** No real evidence provider (realised savings and coverage need Day 17 data); no kill-switch control (the
+provider reports it); shadow agreement with a human is not collected yet; nothing ran against the Airwallex sandbox.
+Nothing is committed (git writes are denied in this session).
+
+**Verification (real output).** Full suite: 1342 passed, 18 skipped. Autonomy integration: 18 passed. import-linter: 4 kept.
+Ruff clean on Day 14 files; mypy has 3 errors, all in `forecast/` and present before Day 14. Eight hand mutants (gate approves
+everything, no escalation over cap, violation demotion off, kill switch ignored, `since` ignored, confirm skips re-assessment,
+confirm skips support check, proposal applies the level) were all caught. Magic numbers: the only literals outside the YAML
+are schema bounds in `config.py` and a regex; an AST test guards this.
+
+**Surprise.** `level_changed` was computed as `from != to`, so a proposal looked like a change. Now true only for
+`promotion_confirmed` and `demoted`.

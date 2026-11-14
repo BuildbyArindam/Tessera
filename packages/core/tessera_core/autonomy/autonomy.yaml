@@ -1,0 +1,37 @@
+# Autonomy dial thresholds (Day 14). Every number the controller uses is here; none is in code.
+# Quote every decimal ("0.8000"): an unquoted 0.8 is a float and is rejected on purpose.
+# Illustrative defaults for the synthetic demo; tune on a validation period, never on the held-out one.
+
+# How far back evidence counts. Violations always count over the full evidence window; the other evidence counts only
+# from when the current level began (evidence gathered at a lower level does not vouch for a higher one).
+window:
+  evidence_days: 30
+  drift_days: 14        # the shorter window the coverage-collapse alarm watches
+
+# A promotion is PROPOSED only when every criterion passes. A criterion with too little evidence does not pass.
+promotion:
+  max_level: L3
+  min_shadow_decisions: 30      # shadow comparisons with a human before agreement means anything
+  min_agreement: "0.8000"       # share of shadow decisions the human agreed with
+  min_saving_observations: 20   # realised-saving samples before the bound is computed
+  min_saving_lower_bound: "0.0000"   # the lower confidence bound on mean saving must be ABOVE this (per 10,000 units)
+  min_coverage_observations: 30      # realised forecast values before coverage means anything
+  coverage_tolerance: "0.0500"       # |observed coverage - target coverage| must be at most this
+
+# How the lower confidence bound on saving is computed: a seeded percentile bootstrap, so the same evidence always
+# gives the same answer.
+bootstrap:
+  resamples: 2000
+  confidence: "0.9500"          # one-sided: the bound is the (1 - confidence) quantile of the resampled means
+  seed: 14
+
+# Automatic demotion. levels_down is clamped at L0.
+demotion:
+  on_violation:                 # any policy violation after the current level began
+    levels_down: 3
+  on_kill_switch:               # the operator's kill switch is engaged
+    levels_down: 3
+  on_coverage_collapse:         # drift alarm: observed coverage fell below target by more than the margin
+    levels_down: 1
+    margin: "0.1000"
+    min_observations: 15

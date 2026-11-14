@@ -21,7 +21,13 @@ With the payload alone, someone could relabel an event or change its time and th
 
 Emitted now: `proposal_created`, `policy_decision`, `approval_requested` (by `POST /plan/run`), `approved` and `rejected`
 (by the approve and reject routes). Defined but emitted by nobody yet: `forecast_made` (the worker, Day 13; the payload
-builder exists), `execution_submitted`, `execution_result`, `webhook_received` (Day 13), `autonomy_changed` (Day 14).
+builder exists), `execution_submitted`, `execution_result`, `webhook_received` (Day 13).
+
+`autonomy_changed` is emitted since Day 14 by the worker (automatic demotion, promotion proposals) and the API (confirm,
+reject, operator demotion). Payload: `kind` (`promotion_proposed`, `promotion_confirmed`, `promotion_rejected`,
+`promotion_cancelled`, `demoted`), `from_level`, `to_level` (names such as `L1`), `level_changed` (true only for
+`promotion_confirmed` and `demoted`), `actor` (`controller` or `operator`), `triggers`, `promotion_id`, `assessment`
+(criteria, observed values, config hash) and `note`. `policy_decision` payloads now carry `shadow`.
 
 A planning run that produces no proposals (the model failed, or its output was invalid) writes no event: the list of
 event types is fixed and has none for it. The API response says what happened (`outcome`).

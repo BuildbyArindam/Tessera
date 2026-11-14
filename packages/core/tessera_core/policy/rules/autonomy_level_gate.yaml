@@ -1,0 +1,47 @@
+# What each autonomy level may do without a person (Day 14). Quote every amount.
+#
+# allowed_actions: action types the level may execute. An action NOT listed is BLOCKED, and a human approval cannot
+#                  override that: nothing above the current level runs.
+# autonomous_cap:  the most a money-moving action may carry, per currency, before a person must approve it (ESCALATE).
+#                  A currency with no cap at a level also escalates.
+#
+# L0 advise-only: nothing executes; proposals are logged as shadow decisions and shown to a person.
+# L1 low-risk:    HOLD and FLAG_INVOICE, plus small conversions.
+# L2 standard:    also larger conversions and supplier payouts. (Beneficiary and limit rules still apply.)
+# L3 extended:    also card top-ups, with caps up to the per-action ceiling. Every other rule still applies.
+# Assumption (docs/daily-log.md): TOPUP_CARD is not listed for L2 in the build guide, so it starts at L3.
+# Each level must allow everything the one below it allows, with caps at least as large; the file will not load otherwise.
+id: autonomy_level_gate
+type: autonomy_level_gate
+params:
+  levels:
+    L0:
+      allowed_actions: []
+      autonomous_cap: {}
+    L1:
+      allowed_actions: [HOLD, FLAG_INVOICE, CONVERT]
+      autonomous_cap:
+        USD: "1000.00"
+        EUR: "1000.00"
+        GBP: "800.00"
+        INR: "80000.00"
+        SGD: "1300.00"
+        AUD: "1500.00"
+    L2:
+      allowed_actions: [HOLD, FLAG_INVOICE, CONVERT, PAY_SUPPLIER]
+      autonomous_cap:
+        USD: "3000.00"
+        EUR: "3000.00"
+        GBP: "2400.00"
+        INR: "240000.00"
+        SGD: "4000.00"
+        AUD: "4500.00"
+    L3:
+      allowed_actions: [HOLD, FLAG_INVOICE, CONVERT, PAY_SUPPLIER, TOPUP_CARD]
+      autonomous_cap:
+        USD: "5000.00"
+        EUR: "5000.00"
+        GBP: "4000.00"
+        INR: "400000.00"
+        SGD: "6000.00"
+        AUD: "7000.00"

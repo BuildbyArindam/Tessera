@@ -26,8 +26,8 @@ from tessera_agent import Planner as AgentPlanner
 from tessera_audit import AuditEventType, AuditLog
 from tessera_audit import payloads as audit_payloads
 from tessera_core.domain import PolicyDecision, Proposal, Verdict
-from tessera_core.policy import PolicyContext, Ruleset, evaluate
-from tessera_store import repo
+from tessera_core.policy import AutonomyLevel, PolicyContext, Ruleset, evaluate
+from tessera_store import repo, repo_autonomy
 
 log = logging.getLogger("tessera.api.planning")
 
@@ -64,11 +64,23 @@ class PlanRunSummary:
 
 
 def decide_proposal(
-    world: PlanningWorld, proposal: Proposal, flag_codes: tuple[str, ...], ruleset: Ruleset
+    world: PlanningWorld,
+    proposal: Proposal,
+    flag_codes: tuple[str, ...],
+    ruleset: Ruleset,
+    *,
+    autonomy_level: AutonomyLevel | None = None,
 ) -> tuple[PolicyDecision, PolicyContext | None]:
-    """Policy's verdict for one proposal. If the context cannot be built, the answer is BLOCK, never APPROVE."""
+    """Policy's verdict for one proposal. If the context cannot be built, the answer is BLOCK, never APPROVE.
+
+    `autonomy_level` is the stored level (tessera_store.repo_autonomy). When given it REPLACES whatever level the world
+    provider put in the context, so the dial has one authority and a provider cannot claim more than was earned. Both
+    production callers (a planning run, and the worker's execution-time re-check) always pass it.
+    """
     try:
         context = world.policy_context(proposal, flag_codes)
+        if autonomy_level is not None:
+            context = context.model_copy(update={"autonomy_level": autonomy_level})
     except Exception:  # fail closed: whatever went wrong, nothing may be approved on the strength of it
         log.exception("policy context could not be built for %s", proposal.id)
         failed = PolicyDecision(
@@ -92,6 +104,7 @@ def run_plan(
 ) -> PlanRunSummary:
     business_id = world.snapshot.business_id
     result = AgentPlanner(llm).run(world.snapshot, now=now)  # the slow, networked step: no lock is held yet
+    level = repo_autonomy.get_level(session)  # read after the slow step, so it is as fresh as this run can make it
     record = result.record
     plan_dump = record.model_dump(mode="json")
     created: list[str] = []
@@ -100,7 +113,7 @@ def run_plan(
         if repo.get_proposal(session, proposal.id) is not None:
             known.append(proposal.id)
             continue
-        decision, context = decide_proposal(world, proposal, result.flag_codes, ruleset)
+        decision, context = decide_proposal(world, proposal, result.flag_codes, ruleset, autonomy_level=level)
         inserted = repo.insert_proposal_if_new(
             session,
             proposal,

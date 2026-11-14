@@ -1,6 +1,7 @@
 """Importing this package registers the built-in rule types."""
 
 from tessera_core.policy.builtin_rules import (
+    autonomy_level_gate,
     beneficiary_allowlist,
     card_limit_cap,
     currency_concentration_cap,
@@ -16,6 +17,7 @@ from tessera_core.policy.builtin_rules import (
 )
 
 __all__ = [
+    "autonomy_level_gate",
     "beneficiary_allowlist",
     "card_limit_cap",
     "currency_concentration_cap",

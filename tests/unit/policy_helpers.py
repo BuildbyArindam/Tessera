@@ -8,6 +8,7 @@ from tessera_core.domain import ActionType, Money, Proposal, SimulationSummary
 from tessera_core.domain.currency import Currency
 from tessera_core.policy import (
     DEFAULT_RULES_DIR,
+    AutonomyLevel,
     ForecastConfidence,
     InputScreening,
     PolicyContext,
@@ -149,6 +150,7 @@ def full_context(**overrides: Any) -> PolicyContext:
     """
     values: dict[str, Any] = {
         "kill_switch_engaged": False,
+        "autonomy_level": AutonomyLevel.L3,  # the most permissive level: tests of other rules are not about the gate
         "now": NOW,
         "balances": {Currency.USD: usd("10000.00"), Currency.EUR: Money(amount="8000.00", currency=Currency.EUR)},
         "spend_today": {},
