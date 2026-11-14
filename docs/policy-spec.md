@@ -3,7 +3,7 @@
 Status: Day 10 (core engine and twelve rules, property-tested; the tenth is simulation-based, the
 eleventh, `untrusted_input_gate`, reads the prompt-injection screening result, and the twelfth,
 `early_payment_gate`, escalates payments made well before they are due).
-Day 14 adds the autonomy gate.
+Day 14 adds the thirteenth rule, `autonomy_level_gate` (below).
 
 ## What it is
 
@@ -308,7 +308,7 @@ and the other checks ignore the amount). A future rule that is not monotonic in 
 
 ## Known limits at Day 7
 
-- The ruleset has no autonomy gate yet (Day 14).
+- (Day 14 added `autonomy_level_gate`; see the next section.)
 - `daily_cumulative_cap`, `velocity_limit` and `card_limit_cap` trust the caller's counters
   (`spend_today`, `recent_approval_times`, `card_loaded_this_month`). Two proposals decided at the same
   moment from the same snapshot could both pass; the worker must serialise decisions or re-check at
@@ -327,3 +327,30 @@ and the other checks ignore the amount). A future rule that is not monotonic in 
   treated as "not run" and escalates money-moving actions, but a worker that always passes `InputScreening()`
   would switch the gate off. Day 13 builds the context in one place (see `World.policy_context` in the
   red-team package).
+
+## autonomy_level_gate (Day 14)
+
+What the current autonomy level lets Tessera do WITHOUT a person. The level comes from `context.autonomy_level`; a
+missing level is a policy error (BLOCK). The level table is this rule's YAML (`rules/autonomy_level_gate.yaml`), so it is
+part of the ruleset hash.
+
+| Level | Name | Allowed without a person |
+|---|---|---|
+| L0 | advise-only | nothing (every action is BLOCKed and logged as a shadow decision) |
+| L1 | low-risk | HOLD, FLAG_INVOICE, CONVERT up to a small per-currency cap |
+| L2 | standard | adds PAY_SUPPLIER, higher caps |
+| L3 | extended | adds TOPUP_CARD, highest caps (every other rule still applies) |
+
+- Action type not allowed at the level: **BLOCK**. A human approval cannot override it, because the worker re-runs policy
+  at execution time and a fresh BLOCK always stops.
+- Amount above the level's cap, or no cap for that currency: **ESCALATE**.
+- Otherwise PASS.
+- The table is validated on load: L0..L3 all present, L0 allows nothing, each level allows at least what the one below
+  allows with caps at least as large.
+- The stored level (one database row) is the only authority. `decide_proposal` overlays it onto the context, so a
+  world provider cannot claim a higher level.
+- A decision whose only BLOCK reason is this rule is a **shadow decision** (`shadow: true` in the audit payload).
+
+Controller thresholds are in `packages/core/tessera_core/autonomy/autonomy.yaml`, not in code. Promotion is only ever
+proposed by the controller; a person confirms it through `POST /autonomy`, and confirmation re-assesses the evidence.
+Demotion (any violation, a coverage collapse, the kill switch) is automatic and immediate.

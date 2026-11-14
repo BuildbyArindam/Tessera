@@ -60,10 +60,26 @@ def _check_positive(value: Decimal) -> Decimal:
     return value
 
 
+def _check_unit(value: Decimal) -> Decimal:
+    if not (0 < value <= 1):
+        raise ValueError("must be greater than 0 and at most 1")
+    return value
+
+
+def _check_non_negative(value: Decimal) -> Decimal:
+    if value < 0:
+        raise ValueError("must not be negative")
+    return value
+
+
 # A percentage, 0 < x <= 100, at most 2 decimal places ("50.00" means fifty percent).
 Percent = Annotated[Decimal, BeforeValidator(_percent), AfterValidator(_check_percent)]
 # A positive ratio with at most 4 decimal places ("0.5000" means half).
 Ratio = Annotated[Decimal, BeforeValidator(_ratio), AfterValidator(_check_positive)]
+# A share, 0 < x <= 1, at most 4 decimal places ("0.8000" means eighty percent). Autonomy thresholds use it.
+UnitRatio = Annotated[Decimal, BeforeValidator(_ratio), AfterValidator(_check_unit)]
+# A number that may be zero, at most 4 decimal places, never negative ("0.0000" is allowed).
+NonNegativeRatio = Annotated[Decimal, BeforeValidator(_ratio), AfterValidator(_check_non_negative)]
 
 
 def _wrap_caps(value: Any) -> Any:

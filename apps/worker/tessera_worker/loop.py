@@ -1,5 +1,6 @@
 """The worker cycle: ingest, forecast, plan, execute, reconcile. Safe to run twice and safe to kill at any point.
 
+  0. autonomy    first of all: assess the evidence; demote at once on a trigger, else maybe propose a promotion
   a. ingest      an injected hook per business (data arrives from Airwallex and the books; see TODO in __main__)
   b. forecast    an injected hook returning ForecastResults; new ones are stored and audited
   c. plan        the planner proposes; policy judges each proposal; the verdict decides where it lands:
@@ -24,9 +25,11 @@ from datetime import date, timedelta
 
 from sqlalchemy.orm import Session
 from tessera_agent import LLMClient
+from tessera_api import autonomy_service
 from tessera_api.planning import run_plan
 from tessera_audit import AuditEventType, AuditLog
 from tessera_audit import payloads as audit_payloads
+from tessera_core.autonomy import AutonomyController
 from tessera_core.forecast import ForecastResult
 from tessera_store import repo, repo_exec
 
@@ -41,17 +44,26 @@ EXECUTE_BATCH = 50
 
 
 @dataclass(frozen=True)
+class AutonomyDeps:
+    controller: AutonomyController
+    inputs: autonomy_service.AutonomyInputsProvider
+
+
+@dataclass(frozen=True)
 class LoopDeps:
     exec: ExecDeps
     llm_factory: Callable[[], LLMClient]
     ingest: IngestStep | None = None
     forecast: ForecastStep | None = None
     reconcile_window: timedelta = timedelta(days=7)
+    # None: the dial does not move on its own (it stays where it is; a person can still lower it through the API).
+    autonomy: AutonomyDeps | None = None
 
 
 def run_cycle(deps: LoopDeps) -> Counter[str]:
     """One pass over everything. Returns counters for the log; never raises for a single business or proposal."""
     report: Counter[str] = Counter()
+    _autonomy_step(deps, report)  # before anything is planned or executed, so a demotion applies to this very cycle
     with deps.exec.session_factory() as session:
         businesses = list(repo_exec.list_business_ids(session))
     for business_id in businesses:
@@ -63,6 +75,25 @@ def run_cycle(deps: LoopDeps) -> Counter[str]:
     _execute_approved(deps, report)
     _reconcile(deps, report)
     return report
+
+
+def _autonomy_step(deps: LoopDeps, report: Counter[str]) -> None:
+    """Assess the evidence and apply what is automatic. A failure leaves the level where it is and is counted."""
+    if deps.autonomy is None:
+        report["autonomy_skipped_no_inputs"] += 1
+        return
+    try:
+        with deps.exec.session_factory() as session:
+            now = deps.exec.clock()
+            inputs = deps.autonomy.inputs.load(session, now)
+            _, outcome = autonomy_service.evaluate_and_apply(
+                session, deps.autonomy.controller, inputs, now=now, audit=AuditLog(session, deps.exec.clock)
+            )
+            session.commit()
+        report[f"autonomy_{outcome.label}"] += 1
+    except Exception:
+        log.exception("autonomy evaluation failed; the level is unchanged this cycle")
+        report["autonomy_errors"] += 1
 
 
 def _business_cycle(deps: LoopDeps, business_id: str, report: Counter[str]) -> None:

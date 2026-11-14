@@ -67,7 +67,7 @@ def test_the_docs_are_public_and_describe_the_key(make_client: Client) -> None:
     spec = anon.get("/openapi.json").json()
     assert set(spec["paths"]) == {
         "/invoices", "/forecasts", "/plan/run", "/proposals", "/proposals/{proposal_id}/approve",
-        "/proposals/{proposal_id}/reject", "/audit", "/audit/verify",
+        "/proposals/{proposal_id}/reject", "/audit", "/audit/verify", "/autonomy",
     }  # fmt: skip
     assert any(
         s.get("type") == "apiKey" and s.get("name") == "X-API-Key"

@@ -33,7 +33,7 @@ from tessera_core.domain import Proposal as ProposalModel
 from tessera_core.domain import Verdict
 from tessera_core.policy import Ruleset
 from tessera_store import models as m
-from tessera_store import repo, repo_exec
+from tessera_store import repo, repo_autonomy, repo_exec
 
 from tessera_worker.dispatch import Retry, VendorDirectory, dispatch
 from tessera_worker.gate import Covered, effective_verdict
@@ -111,7 +111,10 @@ def _gate(deps: ExecDeps, proposal_id: str) -> str | int:
             log.exception("fresh context unavailable for %s", proposal_id)
             return "deferred_no_world"
         proposal = _domain(row)
-        fresh, context = decide_proposal(world, proposal, flag_codes_of(row.plan_record), deps.ruleset)
+        fresh, context = decide_proposal(
+            world, proposal, flag_codes_of(row.plan_record), deps.ruleset,
+            autonomy_level=repo_autonomy.get_level(s),  # a demotion since approval is seen here and stops the action
+        )  # fmt: skip
         log_audit = AuditLog(s, deps.clock)
         repo.add_decision(
             s,

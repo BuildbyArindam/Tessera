@@ -12,6 +12,7 @@ from collections.abc import Mapping
 from datetime import date
 from typing import Any
 
+from tessera_core.autonomy import Assessment, AutonomyLevel, is_shadow_decision
 from tessera_core.domain import PolicyDecision, Proposal
 from tessera_core.forecast import ForecastResult
 from tessera_core.policy import PolicyContext
@@ -74,6 +75,8 @@ def decision_payload(
         "reasons": list(decision.reasons),
         "rule_ids": list(decision.rule_ids),
         "ruleset_hash": decision.ruleset_hash,
+        # Day 14: stopped only because the autonomy level does not allow the action. It never runs; a person sees it.
+        "shadow": is_shadow_decision(decision),
         # What the engine saw. With the ruleset hash and the proposal this reproduces the verdict.
         "context": None if context is None else context.model_dump(mode="json"),
     }
@@ -137,4 +140,37 @@ def webhook_received_payload(
         "event_created_at": event_created_at,
         "outcome": outcome,
         "execution_id": execution_id,
+    }
+
+
+# What an `autonomy_changed` event records. `level_changed` is false for a proposal or a withdrawal (no move).
+AUTONOMY_KINDS = ("promotion_proposed", "promotion_confirmed", "promotion_rejected", "promotion_cancelled", "demoted")
+
+LEVEL_MOVING_KINDS = ("promotion_confirmed", "demoted")  # the only kinds that actually move the dial
+
+
+def autonomy_changed_payload(
+    *,
+    kind: str,
+    from_level: AutonomyLevel,
+    to_level: AutonomyLevel,
+    actor: str,
+    triggers: tuple[str, ...] = (),
+    promotion_id: int | None = None,
+    assessment: Assessment | None = None,
+    note: str | None = None,
+) -> dict[str, Any]:
+    """A change to the autonomy dial, or a step toward one. The assessment carries the criteria and the config hash."""
+    if kind not in AUTONOMY_KINDS:
+        raise ValueError(f"unknown autonomy change kind {kind!r}")
+    return {
+        "kind": kind,
+        "from_level": f"L{from_level.value}",
+        "to_level": f"L{to_level.value}",
+        "level_changed": kind in LEVEL_MOVING_KINDS,
+        "actor": actor,  # "controller" for an automatic move, "operator" for a person
+        "triggers": list(triggers),
+        "promotion_id": promotion_id,
+        "note": note,
+        "assessment": None if assessment is None else assessment.model_dump(mode="json"),
     }

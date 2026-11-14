@@ -28,6 +28,7 @@ from sqlalchemy import (
     Text,
     UniqueConstraint,
     func,
+    text,
 )
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column
@@ -49,6 +50,10 @@ DECISION_PHASES = ("plan", "execution")
 HUMAN_DECISIONS = ("APPROVED", "REJECTED")
 EXECUTION_STATUSES = ("PENDING", "SUBMITTED", "SETTLED", "FAILED")
 WEBHOOK_OUTCOMES = ("applied", "ignored", "unmatched")
+# Day 14. PENDING: proposed by the controller, waiting for a person. CONFIRMED and REJECTED: a person decided.
+# CANCELLED: the controller withdrew it (a demotion, or the evidence no longer supported it). At most one is PENDING.
+PROMOTION_STATUSES = ("PENDING", "CONFIRMED", "REJECTED", "CANCELLED")
+AUTONOMY_LEVEL_MAX = 3
 
 
 def in_list(column: str, values: tuple[str, ...]) -> str:
@@ -251,4 +256,48 @@ class WebhookEvent(Base):
     __table_args__ = (
         CheckConstraint(in_list("outcome", WEBHOOK_OUTCOMES), name="outcome"),
         Index("ix_webhook_events_outcome", "outcome"),
+    )
+
+
+class AutonomyState(Base):
+    """The one row that says how much authority Tessera has right now. The id is pinned to 1 by a CHECK.
+
+    `since` is when this level began: evidence gathered before it does not count toward the next promotion. The policy
+    engine reads the level from here and nowhere else; no proposal, world provider or LLM output can set it.
+    """
+
+    __tablename__ = "autonomy_state"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    level: Mapped[int] = mapped_column(Integer)
+    since: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    updated_at: Mapped[datetime] = _now()
+
+    __table_args__ = (
+        CheckConstraint("id = 1", name="single_row"),
+        CheckConstraint(f"level >= 0 AND level <= {AUTONOMY_LEVEL_MAX}", name="level"),
+    )
+
+
+class AutonomyPromotion(Base):
+    """A promotion the controller proposed. It is an ESCALATE: nothing changes until a person confirms it."""
+
+    __tablename__ = "autonomy_promotions"
+
+    id: Mapped[int] = mapped_column(BigInteger, Identity(), primary_key=True)
+    from_level: Mapped[int] = mapped_column(Integer)
+    to_level: Mapped[int] = mapped_column(Integer)
+    status: Mapped[str] = mapped_column(String(10), server_default="PENDING")
+    assessment: Mapped[dict[str, Any]] = mapped_column(JSONB)  # the criteria and config hash behind the proposal
+    proposed_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    decided_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    actor: Mapped[str | None] = mapped_column(String(64))
+    note: Mapped[str | None] = mapped_column(Text)  # operator-written, untrusted like any text
+
+    __table_args__ = (
+        CheckConstraint(in_list("status", PROMOTION_STATUSES), name="status"),
+        CheckConstraint(f"from_level >= 0 AND to_level <= {AUTONOMY_LEVEL_MAX}", name="level_range"),
+        CheckConstraint("to_level = from_level + 1", name="one_step"),
+        # The partial unique index is what allows only one open proposal at a time.
+        Index("uq_autonomy_promotions_one_pending", "status", unique=True, postgresql_where=text("status = 'PENDING'")),
     )

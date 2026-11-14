@@ -18,7 +18,7 @@ from sqlalchemy.orm import Session
 from tessera_store import models as m
 from tessera_store.base import Base
 
-NINE_TABLES = {
+EXPECTED_TABLES = {
     "businesses",
     "invoices",
     "payments",
@@ -29,12 +29,14 @@ NINE_TABLES = {
     "executions",
     "audit_events",
     "webhook_events",
-}  # fmt: skip  (nine from Day 11, plus webhook_events from Day 13)
+    "autonomy_state",
+    "autonomy_promotions",
+}  # fmt: skip  (nine from Day 11, webhook_events from Day 13, the two autonomy tables from Day 14)
 
 
 def test_the_migration_creates_exactly_the_expected_tables(engine: sa.Engine) -> None:
     tables = set(sa.inspect(engine).get_table_names()) - {"alembic_version"}
-    assert tables == NINE_TABLES
+    assert tables == EXPECTED_TABLES
 
 
 def test_models_and_migration_agree(engine: sa.Engine) -> None:
@@ -56,7 +58,7 @@ def test_upgrade_downgrade_upgrade_round_trips(new_db: Callable[[], str]) -> Non
     with eng.connect() as conn:
         assert conn.scalar(sa.text("SELECT count(*) FROM pg_proc WHERE proname = 'audit_events_reject_change'")) == 0
     command.upgrade(cfg, "head")
-    assert set(sa.inspect(eng).get_table_names()) - {"alembic_version"} == NINE_TABLES
+    assert set(sa.inspect(eng).get_table_names()) - {"alembic_version"} == EXPECTED_TABLES
     eng.dispose()
 
 

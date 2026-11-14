@@ -7,6 +7,7 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
+import sqlalchemy as sa
 from sqlalchemy.orm import Session
 from tessera_agent import FakeLLM, UntrustedText, tool_call_reply
 from tessera_api.planning import PlanningUnavailable, PlanningWorld
@@ -47,6 +48,17 @@ class FixtureWorldProvider:
         if business_id != BUSINESS:
             raise PlanningUnavailable("no planning data for this business")
         return PlanningWorld(snapshot=self.world.snapshot(self._untrusted), policy_context=self.world.policy_context)
+
+
+def set_stored_level(url: str, level: int, *, at: datetime | None = None) -> None:
+    """Set the stored autonomy level (and restart its evidence clock) directly, the way a fixture needs it."""
+    eng = sa.create_engine(url)
+    with eng.begin() as conn:
+        conn.execute(
+            sa.text("UPDATE autonomy_state SET level = :level, since = :since WHERE id = 1"),
+            {"level": int(level), "since": at or T0},
+        )
+    eng.dispose()
 
 
 def scripted_llm(*items: dict[str, Any]) -> FakeLLM:
