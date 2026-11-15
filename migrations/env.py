@@ -6,6 +6,7 @@ from alembic import context
 from sqlalchemy import create_engine, pool
 from tessera_audit import model as _audit_model  # noqa: F401  (registers audit_events on the shared metadata)
 from tessera_store import models as _store_models  # noqa: F401  (registers the other tables)
+from tessera_store import models_dashboard as _dashboard_models  # noqa: F401  (registers the Day 15 read models)
 from tessera_store.base import Base
 from tessera_store.session import normalise_url
 

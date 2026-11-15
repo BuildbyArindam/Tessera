@@ -359,3 +359,47 @@ are schema bounds in `config.py` and a regex; an AST test guards this.
 
 **Surprise.** `level_changed` was computed as `from != to`, so a proposal looked like a change. Now true only for
 `promotion_confirmed` and `demoted`.
+
+## Day 15: Dashboard, part 1 (2026-11-14)
+
+**Built.** `apps/web` (Next.js 15 App Router, TypeScript strict): sidebar (Overview, Proposals, Policies, Audit), Overview
+with an autonomy badge, balance cards per currency, one forecast chart per currency (point line and shaded 80% interval,
+30/60/90-day switch), upcoming obligations, and open invoices with late-payment risk badges. Every section has loading,
+empty and error states. The typed client is generated from the FastAPI schema (`scripts/export_openapi.py` writes
+`apps/web/openapi.json`, `openapi-typescript` writes `src/api/schema.d.ts`; `make web-client`, and `make web-check` fails if
+it is stale). The browser calls a read-only Next route (`/api/tessera/...`) that adds the API key on the server; Proposals,
+Policies and Audit are placeholders.
+API: `GET /businesses`, `GET /businesses/{id}/balances`, `GET /businesses/{id}/obligations`, `GET /forecasts?latest=true`,
+and `GET /invoices` now returns each invoice's `late_risk`. Migration 0004 adds `balance_snapshots`, `payables`,
+`late_risk_scores`. `scripts/seed_demo.py` (`make seed`) fits the Day 4 forecaster and the Day 5 scorer on the synthetic
+business and loads everything; a second run adds nothing.
+
+**Assumptions (simplest option chosen).**
+- **Balances are stand-ins.** The generator has no balances, so each is four weeks of average gross weekly cash movement in
+  that currency over the last 13 weeks. The real source is the worker copying them from Airwallex (not built today).
+- 30/60/90 days are 4/8/13 weeks. Forecasts are stored for weeks 1 to 13 so the chart is a curve with those three marks.
+- Each forecast value is the NET cash flow of one week, not a running balance; the page says so.
+- The API cannot import the Airwallex package and the scorer is too heavy for a request, so balances and late-risk scores
+  are snapshot tables written by the worker or the seed script, and the API only reads them.
+- "Upcoming" is measured from the date of the newest forecast (2026-06-30 in the demo), not the wall clock, so it matches
+  the numbers beside it. Overdue open invoices are included.
+- Risk badge: already late, then high at p >= 0.6, medium at p >= 0.3 (illustrative thresholds, in `lib/risk.ts`). Colour is
+  never the only signal: each badge carries text and a shape.
+- A part-paid synthetic invoice (`settled_partial`) is stored OPEN: money is still owed.
+- Day 3's `load_history` read a schema the generator never wrote (`direction`, `cash_date`); it is rewritten against the real
+  files. Unpaid outflows become payables, not cash flows.
+
+**Not done.** Approvals, policies and audit screens; real balance ingest; the web service in Docker Compose; no run against
+the Airwallex sandbox. Nothing is committed (git writes are denied in this session).
+
+**Verification (real output).** Full suite against local PostgreSQL 16: 1362 passed, 18 skipped (the sandbox-credential
+tests). New: 20 API tests in `test_api_dashboard.py`. Web: 17 Vitest tests, `tsc` clean, `next lint` clean, production build
+ok. In Chromium against the seeded database: 5 balance cards, 5 charts, 12 obligations and 9 risk rows for B01; axe-core
+(WCAG 2.0/2.1 A and AA) 0 violations in light and dark; no console errors; tab order is skip link, nav, controls, tables;
+no horizontal overflow at 390 px; with the API stopped the page shows an alert with a working retry. import-linter 4 kept.
+Ruff clean on Day 15 files (the repo had 49 errors before today). mypy: the same 3 `forecast/` errors as before.
+
+**Surprise.** Stacking `lower` and `upper - lower` as areas draws the band wrongly when `lower` is negative, which is most of
+the time for net cash flow. The chart uses a range area, `[lower, upper]`, instead. Also: INR point forecasts sit at 0 in
+most weeks and jump at payroll weeks, because the Day 4 model minimises absolute error (a median) on a lumpy series; the
+interval is the honest part of that picture.

@@ -23,7 +23,7 @@ from tessera_store import make_engine, make_session_factory
 from tessera_api.autonomy_service import AutonomyInputsProvider
 from tessera_api.deps import API_KEY_HEADER, AppContext, Settings, key_is_valid
 from tessera_api.planning import WorldProvider
-from tessera_api.routes import audit, autonomy, forecasts, invoices, plan, proposals
+from tessera_api.routes import audit, autonomy, businesses, forecasts, invoices, plan, proposals
 
 PUBLIC_PATHS = frozenset({"/docs", "/redoc", "/openapi.json", "/docs/oauth2-redirect"})
 
@@ -92,6 +92,14 @@ def create_app(
     async def _database_down(_: Request, __: OperationalError) -> JSONResponse:
         return JSONResponse(status_code=503, content={"detail": "database unavailable"})
 
-    for router in (invoices.router, forecasts.router, plan.router, proposals.router, audit.router, autonomy.router):
+    for router in (
+        businesses.router,
+        invoices.router,
+        forecasts.router,
+        plan.router,
+        proposals.router,
+        audit.router,
+        autonomy.router,
+    ):
         app.include_router(router)
     return app

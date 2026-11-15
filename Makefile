@@ -1,4 +1,4 @@
-.PHONY: setup up down test test-integration db-test-up db-test-down migrate api lint typecheck eval redteam demo fmt
+.PHONY: setup up down test test-integration db-test-up db-test-down migrate api lint typecheck eval redteam demo fmt seed web-client web-install web-dev web-check
 
 VENV := .venv
 BIN  := $(VENV)/bin
@@ -48,6 +48,23 @@ fmt:
 typecheck:  ## mypy strict on tessera_core, standard on the rest
 	$(BIN)/mypy packages/core/tessera_core packages/airwallex/tessera_airwallex packages/agent/tessera_agent \
 		packages/store/tessera_store packages/audit/tessera_audit apps/api/tessera_api apps/worker/tessera_worker
+
+seed:  ## fit the models on data/synthetic and load the demo business into DATABASE_URL (idempotent, about a minute)
+	$(BIN)/python scripts/seed_demo.py
+
+web-client:  ## regenerate apps/web/openapi.json and the typed TypeScript client from the FastAPI schema
+	$(BIN)/python scripts/export_openapi.py
+	cd apps/web && npm run gen:api
+
+web-install:
+	cd apps/web && npm install
+
+web-dev:  ## dashboard on :3000 (needs TESSERA_API_URL and TESSERA_API_KEY for the server-side proxy; see apps/web/.env.example)
+	cd apps/web && npm run dev
+
+web-check:  ## the generated client is current, then typecheck, lint, unit tests and a production build
+	$(BIN)/python scripts/export_openapi.py --check
+	cd apps/web && npm run typecheck && npm run lint && npm test && npm run build
 
 eval:  ## forecast and savings evaluation (Day 17)
 	@echo "eval: not implemented yet (Day 17)"
