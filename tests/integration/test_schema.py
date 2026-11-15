@@ -31,7 +31,10 @@ EXPECTED_TABLES = {
     "webhook_events",
     "autonomy_state",
     "autonomy_promotions",
-}  # fmt: skip  (nine from Day 11, webhook_events from Day 13, the two autonomy tables from Day 14)
+    "balance_snapshots",
+    "payables",
+    "late_risk_scores",
+}  # fmt: skip  (Day 11: nine; Day 13: webhook_events; Day 14: two autonomy; Day 15: three read models)
 
 
 def test_the_migration_creates_exactly_the_expected_tables(engine: sa.Engine) -> None:
@@ -64,7 +67,7 @@ def test_upgrade_downgrade_upgrade_round_trips(new_db: Callable[[], str]) -> Non
 
 def test_no_money_column_is_a_float(engine: sa.Engine) -> None:
     money = {("invoices", "amount"), ("payments", "amount"), ("forecasts", "point"), ("forecasts", "lower"),
-             ("forecasts", "upper")}  # fmt: skip
+             ("forecasts", "upper"), ("balance_snapshots", "available"), ("payables", "amount")}  # fmt: skip
     with engine.connect() as conn:
         rows = conn.execute(
             sa.text(

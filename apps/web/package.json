@@ -1,0 +1,36 @@
+{
+  "name": "tessera-web",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "gen:api": "openapi-typescript openapi.json -o src/api/schema.d.ts"
+  },
+  "dependencies": {
+    "next": "15.5.29",
+    "openapi-fetch": "0.17.0",
+    "react": "^19.1.0",
+    "react-dom": "^19.1.0",
+    "recharts": "3.10.1"
+  },
+  "devDependencies": {
+    "@eslint/eslintrc": "^3.3.7",
+    "@testing-library/jest-dom": "^6.6.0",
+    "@testing-library/react": "^16.3.0",
+    "@types/node": "^22.10.0",
+    "@types/react": "^19.1.0",
+    "@types/react-dom": "^19.1.0",
+    "@vitejs/plugin-react": "^4.5.0",
+    "eslint": "^9.20.0",
+    "eslint-config-next": "15.5.29",
+    "jsdom": "^26.0.0",
+    "openapi-typescript": "7.13.0",
+    "typescript": "^5.7.0",
+    "vitest": "^3.2.0"
+  }
+}
