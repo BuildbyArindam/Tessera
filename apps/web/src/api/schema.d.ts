@@ -198,6 +198,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/policies": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Policies */
+        get: operations["get_policies_policies_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/proposals": {
         parameters: {
             query?: never;
@@ -424,6 +441,10 @@ export interface components {
              * Format: date-time
              */
             decided_at: string;
+            /** Forecast Relative Width */
+            forecast_relative_width?: {
+                [key: string]: string;
+            } | null;
             /** Phase */
             phase: string;
             /** Reasons */
@@ -432,6 +453,7 @@ export interface components {
             rule_ids: string[];
             /** Ruleset Hash */
             ruleset_hash: string | null;
+            simulation?: components["schemas"]["SimulationOut"] | null;
             /** Verdict */
             verdict: string;
         };
@@ -658,6 +680,16 @@ export interface components {
             /** Prompt Hash */
             prompt_hash: string;
         };
+        /**
+         * PolicyOut
+         * @description The rules in force, read-only. `ruleset_hash` is the same hash every decision carries.
+         */
+        PolicyOut: {
+            /** Rules */
+            rules: components["schemas"]["RuleOut"][];
+            /** Ruleset Hash */
+            ruleset_hash: string;
+        };
         /** PromotionOut */
         PromotionOut: {
             /** Actor */
@@ -735,6 +767,30 @@ export interface components {
             note?: string | null;
             /** Promotion Id */
             promotion_id: number;
+        };
+        /** RuleOut */
+        RuleOut: {
+            /** Id */
+            id: string;
+            /** Params */
+            params: {
+                [key: string]: components["schemas"]["JsonValue"];
+            };
+            /** Type */
+            type: string;
+            /** Version */
+            version: number;
+        };
+        /**
+         * SimulationOut
+         * @description What the simulator told policy about this proposal. All money is in the sell currency; the loss is never negative.
+         */
+        SimulationOut: {
+            amount: components["schemas"]["Money-Output"];
+            expected_saving: components["schemas"]["Money-Output"];
+            /** N Paths */
+            n_paths: number;
+            worst_case_loss: components["schemas"]["Money-Output"];
         };
         /** ValidationError */
         ValidationError: {
@@ -1081,6 +1137,26 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_policies_policies_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PolicyOut"];
                 };
             };
         };

@@ -7,3 +7,7 @@ __pycache__/
 artifacts/
 *.egg-info/
 .hypothesis/
+
+# Playwright
+apps/web/e2e-artifacts/
+apps/web/playwright-report/

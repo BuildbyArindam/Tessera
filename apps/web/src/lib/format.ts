@@ -18,6 +18,11 @@ export function formatDate(iso: string): string {
   );
 }
 
+export function formatDateTime(iso: string): string {
+  const fmt = new Intl.DateTimeFormat("en", { dateStyle: "medium", timeStyle: "medium", timeZone: "UTC" });
+  return `${fmt.format(new Date(iso))} UTC`;
+}
+
 export function formatPercent(p: number): string {
   return `${Math.round(p * 100)}%`;
 }

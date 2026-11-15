@@ -24,3 +24,14 @@ export const loadRiskyInvoices = async (businessId: string) =>
   );
 
 export const loadAutonomy = async () => unwrap(await api.GET("/autonomy"));
+
+export const loadProposals = async (businessId: string) =>
+  unwrap(await api.GET("/proposals", { params: { query: { business_id: businessId, limit: 200 } } }));
+
+export const loadPolicies = async () => unwrap(await api.GET("/policies"));
+
+export const AUDIT_PAGE_SIZE = 20;
+export const loadAuditPage = async (afterSeq: number) =>
+  unwrap(await api.GET("/audit", { params: { query: { after_seq: afterSeq, limit: AUDIT_PAGE_SIZE } } }));
+
+export const verifyAuditChain = async () => unwrap(await api.GET("/audit/verify"));

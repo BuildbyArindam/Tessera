@@ -50,3 +50,25 @@ export function groupForecasts(forecasts: Forecast[], window: Window): CurrencyF
       };
     });
 }
+
+export interface ProposalInterval {
+  days: number;
+  point: Forecast["point"];
+  lower: Forecast["lower"];
+  upper: Forecast["upper"];
+  coverage: number;
+  asOf: string;
+}
+
+const WINDOW_FOR_WEEKS = new Map<number, Window>(WINDOWS.map((w) => [WINDOW_WEEKS[w], w]));
+
+/** The 30 / 60 / 90 day intervals for one currency, straight from the stored forecasts (strings, never recomputed). */
+export function intervalsFor(forecasts: Forecast[], currency: Currency): ProposalInterval[] {
+  const rows: ProposalInterval[] = [];
+  for (const f of [...forecasts].sort((a, b) => a.horizon_weeks - b.horizon_weeks)) {
+    const days = WINDOW_FOR_WEEKS.get(f.horizon_weeks);
+    if (f.currency !== currency || days === undefined) continue;
+    rows.push({ days, point: f.point, lower: f.lower, upper: f.upper, coverage: f.target_coverage, asOf: f.as_of });
+  }
+  return rows;
+}
