@@ -90,6 +90,15 @@ class ForecastOut(Response):
 
 
 # ---- proposals ------------------------------------------------------------------------------------
+class SimulationOut(BaseModel):
+    """What the simulator told policy about this proposal. Money is in the sell currency; the loss is never negative."""
+
+    amount: Money
+    expected_saving: Money
+    worst_case_loss: Money  # the 5th-percentile shortfall versus the comparator
+    n_paths: int
+
+
 class DecisionOut(Response):
     phase: str
     verdict: str
@@ -97,6 +106,10 @@ class DecisionOut(Response):
     rule_ids: list[str]
     ruleset_hash: str | None
     decided_at: datetime
+    # Read from the context the engine saw, so the card shows the numbers the decision was made on. None when the
+    # context could not be built (a fail-closed BLOCK) or did not carry them.
+    simulation: SimulationOut | None = None
+    forecast_relative_width: dict[Currency, str] | None = None  # interval width / point estimate, as a decimal string
 
 
 class ApprovalOut(Response):
@@ -121,6 +134,21 @@ class ProposalOut(Response):
 
 class ApprovalIn(Request):
     note: Annotated[Text, StringConstraints(max_length=500)] | None = None
+
+
+# ---- policies -------------------------------------------------------------------------------------
+class RuleOut(BaseModel):
+    id: str
+    type: str
+    version: int
+    params: dict[str, JsonValue]
+
+
+class PolicyOut(BaseModel):
+    """The rules in force, read-only. `ruleset_hash` is the same hash every decision carries."""
+
+    ruleset_hash: str
+    rules: list[RuleOut]
 
 
 # ---- plan runs ------------------------------------------------------------------------------------

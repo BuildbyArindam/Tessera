@@ -403,3 +403,35 @@ Ruff clean on Day 15 files (the repo had 49 errors before today). mypy: the same
 the time for net cash flow. The chart uses a range area, `[lower, upper]`, instead. Also: INR point forecasts sit at 0 in
 most weeks and jump at payroll weeks, because the Day 4 model minimises absolute error (a median) on a lumpy series; the
 interval is the honest part of that picture.
+
+## Day 16: dashboard, part 2 (approvals, policies, audit)
+
+**Built.** Proposals screen (tabs: Needs approval / Decided / Blocked; Approve and Reject only on `PENDING_APPROVAL`), Policies
+screen (ruleset hash, read-only rules and parameters, Autonomy with evidence and Confirm promotion), Audit screen (20 per
+page, event detail, Verify chain, jump to the broken row). API additions: `GET /policies`; `decision` on proposals now
+carries the stored `simulation` and `forecast_relative_width`, read back from the persisted policy context. The proxy now
+forwards only four writes (approve, reject, confirm or reject a promotion), same-origin, JSON, 4 KB.
+
+**Assumptions (simplest option taken).**
+- Explanations are a template over structured fields (`lib/explain.ts`); no figure is hard-coded, and the only derived
+  number is the agent's confidence as a whole percent. The optional LLM paraphrase was NOT built; the model's own rationale
+  is shown separately in a closed section labelled "unverified". Anything shown from the model is never used for numbers.
+- Only `SETTLED` reads as executed. `APPROVED` says "waiting for the worker", `SUBMITTED` says "not settled yet". Nothing is
+  assumed from a click: the card changes only from what the API returns, then polls (4 s) while a proposal is in flight.
+- No "reject promotion" button; the API supports it, the brief asked only for Confirm.
+- The API does not expose why a proposal FAILED, so the card says "Failed" and nothing more.
+- Proposal ids are content hashes, so planning identical content twice adds no second card.
+- The audit API cannot tell that a full page was the last one, so Next on an exactly-full last page shows an empty page;
+  the screen now says "No more events" and keeps Previous (found by a test, fixed).
+- Verification harness (`scripts/serve_day16_demo.py`) runs the real API and the real worker execute and reconcile steps on
+  the mock adapter at autonomy L1 with a scripted planner. It exists only for the browser tests.
+
+**Surprises.** On the mock adapter a payout only reaches SUBMITTED (SETTLED needs a webhook) and a cross-currency payout
+is refused by the worker, so the approve-then-settle test uses an escalated conversion, which settles synchronously.
+A visually hidden table caption (absolute) escaped its scroll container and widened the mobile page by 59 px on /audit; fixed with
+`position: relative` on the wrapper. Tabs now also answer Home and End. The audit hash covers the stored text, so a tamper
+test must write text back unchanged (a `::jsonb` round trip changes the bytes and breaks the chain).
+
+**Not done.** Day 17. No run against the real Airwallex sandbox. Not pushed (no GitHub access from this session).
+Ruff still reports errors in older files (verify_day6/13 scripts, evalkit, core/forecast/backtest) and mypy the same 3
+`forecast/` errors; none are in Day 16 files.

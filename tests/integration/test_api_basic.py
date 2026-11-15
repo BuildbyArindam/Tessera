@@ -69,6 +69,7 @@ def test_the_docs_are_public_and_describe_the_key(make_client: Client) -> None:
         "/invoices", "/forecasts", "/plan/run", "/proposals", "/proposals/{proposal_id}/approve",
         "/proposals/{proposal_id}/reject", "/audit", "/audit/verify", "/autonomy",
         "/businesses", "/businesses/{business_id}/balances", "/businesses/{business_id}/obligations",
+        "/policies",
     }  # fmt: skip
     assert any(
         s.get("type") == "apiKey" and s.get("name") == "X-API-Key"

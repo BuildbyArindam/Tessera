@@ -455,6 +455,23 @@
             "title": "Decided At",
             "type": "string"
           },
+          "forecast_relative_width": {
+            "anyOf": [
+              {
+                "additionalProperties": {
+                  "type": "string"
+                },
+                "propertyNames": {
+                  "$ref": "#/components/schemas/Currency"
+                },
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Forecast Relative Width"
+          },
           "phase": {
             "title": "Phase",
             "type": "string"
@@ -483,6 +500,16 @@
               }
             ],
             "title": "Ruleset Hash"
+          },
+          "simulation": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/SimulationOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
           },
           "verdict": {
             "title": "Verdict",
@@ -1100,6 +1127,28 @@
         "title": "PlanRunOut",
         "type": "object"
       },
+      "PolicyOut": {
+        "description": "The rules in force, read-only. `ruleset_hash` is the same hash every decision carries.",
+        "properties": {
+          "rules": {
+            "items": {
+              "$ref": "#/components/schemas/RuleOut"
+            },
+            "title": "Rules",
+            "type": "array"
+          },
+          "ruleset_hash": {
+            "title": "Ruleset Hash",
+            "type": "string"
+          }
+        },
+        "required": [
+          "ruleset_hash",
+          "rules"
+        ],
+        "title": "PolicyOut",
+        "type": "object"
+      },
       "PromotionOut": {
         "properties": {
           "actor": {
@@ -1306,6 +1355,63 @@
           "promotion_id"
         ],
         "title": "RejectPromotionIn",
+        "type": "object"
+      },
+      "RuleOut": {
+        "properties": {
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "params": {
+            "additionalProperties": {
+              "$ref": "#/components/schemas/JsonValue"
+            },
+            "title": "Params",
+            "type": "object"
+          },
+          "type": {
+            "title": "Type",
+            "type": "string"
+          },
+          "version": {
+            "title": "Version",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "type",
+          "version",
+          "params"
+        ],
+        "title": "RuleOut",
+        "type": "object"
+      },
+      "SimulationOut": {
+        "description": "What the simulator told policy about this proposal. All money is in the sell currency; the loss is never negative.",
+        "properties": {
+          "amount": {
+            "$ref": "#/components/schemas/Money-Output"
+          },
+          "expected_saving": {
+            "$ref": "#/components/schemas/Money-Output"
+          },
+          "n_paths": {
+            "title": "N Paths",
+            "type": "integer"
+          },
+          "worst_case_loss": {
+            "$ref": "#/components/schemas/Money-Output"
+          }
+        },
+        "required": [
+          "amount",
+          "expected_saving",
+          "worst_case_loss",
+          "n_paths"
+        ],
+        "title": "SimulationOut",
         "type": "object"
       },
       "ValidationError": {
@@ -2022,6 +2128,32 @@
         "summary": "Plan Run",
         "tags": [
           "plan"
+        ]
+      }
+    },
+    "/policies": {
+      "get": {
+        "operationId": "get_policies_policies_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PolicyOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "APIKeyHeader": []
+          }
+        ],
+        "summary": "Get Policies",
+        "tags": [
+          "policies"
         ]
       }
     },

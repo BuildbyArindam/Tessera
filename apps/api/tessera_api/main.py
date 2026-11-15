@@ -23,7 +23,7 @@ from tessera_store import make_engine, make_session_factory
 from tessera_api.autonomy_service import AutonomyInputsProvider
 from tessera_api.deps import API_KEY_HEADER, AppContext, Settings, key_is_valid
 from tessera_api.planning import WorldProvider
-from tessera_api.routes import audit, autonomy, businesses, forecasts, invoices, plan, proposals
+from tessera_api.routes import audit, autonomy, businesses, forecasts, invoices, plan, policies, proposals
 
 PUBLIC_PATHS = frozenset({"/docs", "/redoc", "/openapi.json", "/docs/oauth2-redirect"})
 
@@ -97,6 +97,7 @@ def create_app(
         invoices.router,
         forecasts.router,
         plan.router,
+        policies.router,
         proposals.router,
         audit.router,
         autonomy.router,
