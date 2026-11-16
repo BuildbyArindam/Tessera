@@ -1,0 +1,50 @@
+{
+  "manifest": {
+    "autonomy_level": 2,
+    "bootstrap_replicates": 4000,
+    "calibration_weeks": 16,
+    "coverage": 0.8,
+    "data_end": "2026-06-30",
+    "dev_start": "2025-02-01",
+    "fee": "2.00",
+    "fx_source": "synthetic",
+    "heldout_start": "2026-01-04",
+    "horizons": [
+      4,
+      8,
+      13
+    ],
+    "range_sims": 2000,
+    "ruleset_hashes": {
+      "full policy": "bf242bd23cbdc8c7ef7a59dc326a61948ebcc892166a3dbe15050bbb3a26bd28",
+      "without both gates": "4c3402c20d4a7f60f3dcaf67f3eb4226a5bd7732bcdcb84dd7b61ec4b545058b",
+      "without forecast_confidence_gate": "3e1a05044dda1e2facbd8140e34d3b45fc294f581be1b32f82a6546212358ed8",
+      "without worst_case_loss_gate": "4e7025cc4cf4948f94600bf1775d1e00d63a5bc4b68aeb659738aff3a2ffdf21"
+    },
+    "seed": 7,
+    "sim_paths": 5000,
+    "spread_bps": "50",
+    "synthetic_data_sha256": {
+      "businesses": "e013d21a1b9b69d44a2af46b812d41bc6c159b53a10e45796d0b822b0afeab6d",
+      "counterparties": "26fa0bbffe10389f03cdd79b8ebdaec52536bb859fc652110986210b75cffc7a",
+      "customers": "8e5479bef9a8e8d6da43e27fe706b716e34d7245d4e51446590383dcf40b9a92",
+      "ground_truth": "89e71cbe56748f2035ed92566bea1ddaefd13fff1b4a3b5e934099af7054af95",
+      "invoices": "cd81b12e025891c4635f18ec1fbb08e9e131dd175b2eee26255503f788896356",
+      "outflows": "a029eb5e24f49a435148ad051b7beb0a9169e7e8ffd801d300b97dc140c532b9",
+      "payments": "474cc5b89a3f871612cb7e2389e6d435c7181a15e11f0a6c406a00615ea711f5"
+    }
+  },
+  "planner": {
+    "a_priori": 0.2,
+    "a_priori_heldout_proposals": 0,
+    "dev_decisions": 1600,
+    "dev_obligations": 400,
+    "dev_p_max": 0.295,
+    "dev_quantile": 0.75,
+    "drop_threshold_pct": 2.0,
+    "fraction": 0.4,
+    "heldout_obligations": 174,
+    "min_p_adverse": 0.114,
+    "stress_ceiling_scale": 0.1
+  }
+}

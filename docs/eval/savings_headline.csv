@@ -1,0 +1,3 @@
+baseline,n_obligations,n_acted,saving_per_10k,lo,hi,week_lo,week_hi,share_beat,share_tie,share_lose,share_beat_when_acted,verdict,verdict_week_clusters
+convert on due date,174,4,0.504481,-0.023502,1.350653,-0.024474,1.194953,0.017241,0.977011,0.005747,0.750000,not distinguishable from zero (interval includes zero),not distinguishable from zero (interval includes zero)
+convert on invoice date,174,4,67.946283,29.846392,107.310289,-0.770555,144.735758,0.597701,0.000000,0.402299,0.250000,positive (interval above zero),not distinguishable from zero (interval includes zero)

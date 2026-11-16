@@ -1,0 +1,5 @@
+variant,saving_per_10k,lo,hi,p05_obligation_saving_per_10k,worst_obligation_saving_per_10k,worst_single_loss_eur,max_simulated_worst_case_loss_approved_eur,proposals,approved,escalated,blocked,escalated_by,diff_vs_full,diff_lo,diff_hi
+full policy,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,18,0,18,0,"{'worst_case_loss_gate': 10, 'forecast_confidence_gate': 10, 'autonomy_level_gate': 3}",0.000000,0.000000,0.000000
+without forecast_confidence_gate,0.380419,0.088785,0.769153,0.000000,-18.217123,0.626013,37.900000,18,8,10,0,"{'worst_case_loss_gate': 10, 'autonomy_level_gate': 3}",0.380419,0.092195,0.767867
+without worst_case_loss_gate,0.504481,-0.023502,1.350653,0.000000,-7.032925,2.322155,77.010000,18,5,13,0,"{'forecast_confidence_gate': 10, 'autonomy_level_gate': 3}",0.504481,-0.022814,1.340788
+without both gates,1.119027,0.367285,2.131980,0.000000,-18.217123,2.322155,77.010000,18,15,3,0,{'autonomy_level_gate': 3},1.119027,0.360837,2.124151
