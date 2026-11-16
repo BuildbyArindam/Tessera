@@ -435,3 +435,28 @@ test must write text back unchanged (a `::jsonb` round trip changes the bytes an
 **Not done.** Day 17. No run against the real Airwallex sandbox. Not pushed (no GitHub access from this session).
 Ruff still reports errors in older files (verify_day6/13 scripts, evalkit, core/forecast/backtest) and mypy the same 3
 `forecast/` errors; none are in Day 16 files.
+
+## Day 17: Evaluation of forecasts and savings
+
+**Built.** `tessera_evalkit` evaluation (eval_*.py, `evaluate.py`; `make eval`): forecast table (WAPE, bias, coverage, width,
+pinball by horizon and currency, cluster bootstrap over businesses), savings replay of the real policy engine and the
+13-rule YAML over the held-out FX path (spreads 50 bps and a 2.00 fee assumed), ablations, plots, and `docs/eval-report.md`
+(seed 7, byte-identical across runs). Held-out period starts 2026-01-04; the split and data hashes are in `docs/eval/heldout_freeze.json`.
+
+**Assumptions.** The scripted planner stands in for the LLM (no API in the session). Escalations and blocks do not execute
+(autonomous path only). "ALL" is an unweighted macro-average over currencies, because pooled values were dominated by INR.
+Planner threshold: the a-priori 0.20 gave zero proposals, so it was replaced by the 75th percentile of planner input on a
+development period (2025-02-01 up to the held-out start); no savings outcome was read. Disclosed in the report.
+
+**Results (honest).** LightGBM beats naive and seasonal-naive on WAPE at every horizon. Coverage is at or below the nominal 80%
+at 4 and 8 weeks (INR under-covers). Savings versus due date: 0.50 EUR per 10,000 [-0.02, 1.35], not distinguishable from zero;
+the planner acted on 4 of 174 obligations. The invoice-date gain (67.9) is path drift. Removing the forecast_confidence_gate
+raises savings by 0.61 but worsens the worst obligation from -7.0 to -18.2; the worst_case_loss_gate never binds at shipped ceilings.
+
+**Verification.** `scripts/verify_day17.py`: two-run hash equality, poisoned-label leakage probe (with a positive control),
+independent re-scoring of forecast cells, hand rebuild of every acted obligation's cost, loop bootstrap re-run. 0 failures.
+
+**Surprises.** A first poisoned-label probe overwrote NaN labels too, which added test rows; only observed labels may be poisoned.
+
+**Not done.** Day 8's simulated-tail coverage test is not part of this evaluation. No real LLM planner run. Not pushed (no GitHub access).
+

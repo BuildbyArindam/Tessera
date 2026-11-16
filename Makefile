@@ -67,7 +67,8 @@ web-check:  ## the generated client is current, then typecheck, lint, unit tests
 	cd apps/web && npm run typecheck && npm run lint && npm test && npm run build
 
 eval:  ## forecast and savings evaluation (Day 17)
-	@echo "eval: not implemented yet (Day 17)"
+	$(BIN)/python -m tessera_evalkit.evaluate --data data/synthetic --fx data/fx/fx_daily.parquet --out docs/eval --report docs/eval-report.md --seed 7
+	$(BIN)/python scripts/verify_day17.py
 
 redteam:  ## injection red-team suite: 25 cases through sanitiser, planner and policy (Day 10); exits 1 on a violation
 	$(BIN)/python -m tessera_evalkit.redteam --out artifacts/redteam
