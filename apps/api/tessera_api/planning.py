@@ -26,8 +26,9 @@ from tessera_agent import Planner as AgentPlanner
 from tessera_audit import AuditEventType, AuditLog
 from tessera_audit import payloads as audit_payloads
 from tessera_core.domain import PolicyDecision, Proposal, Verdict
-from tessera_core.policy import AutonomyLevel, PolicyContext, Ruleset, evaluate
-from tessera_store import repo, repo_autonomy
+from tessera_core.policy import AutonomyLevel, Ledger, PolicyContext, Ruleset, evaluate, fold, merge_into
+from tessera_core.policy.ledger import VELOCITY_WINDOW, month_start
+from tessera_store import repo, repo_autonomy, repo_ledger
 
 log = logging.getLogger("tessera.api.planning")
 
@@ -63,12 +64,20 @@ class PlanRunSummary:
     already_known: tuple[str, ...]
 
 
+def current_ledger(session: Session, business_id: str, *, now: datetime, exclude_id: str | None = None) -> Ledger:
+    """What this business has already approved today, this hour and this month, read from the proposals themselves."""
+    since = min(month_start(now), now - VELOCITY_WINDOW)
+    return fold(repo_ledger.entries(session, business_id, since=since, exclude_id=exclude_id), now=now)
+
+
 def decide_proposal(
     world: PlanningWorld,
     proposal: Proposal,
     flag_codes: tuple[str, ...],
     ruleset: Ruleset,
     *,
+    ledger: Ledger,
+    now: datetime,
     autonomy_level: AutonomyLevel | None = None,
 ) -> tuple[PolicyDecision, PolicyContext | None]:
     """Policy's verdict for one proposal. If the context cannot be built, the answer is BLOCK, never APPROVE.
@@ -76,11 +85,18 @@ def decide_proposal(
     `autonomy_level` is the stored level (tessera_store.repo_autonomy). When given it REPLACES whatever level the world
     provider put in the context, so the dial has one authority and a provider cannot claim more than was earned. Both
     production callers (a planning run, and the worker's execution-time re-check) always pass it.
+
+    `ledger` and `now` are required, not optional, for the same reason (Day 18). The cumulative limits (daily cap,
+    hourly velocity, monthly card cap) are judged on totals, and a provider that reports empty totals makes them never
+    bind: five 375,000 INR payments, each inside the per-action cap, all went out against a 1,200,000 daily cap. The
+    ledger is read from the approved proposals, never from the provider, and is merged so the provider can add to it
+    but not lower it; `now` is the caller's clock, the one the ledger windows were cut with.
     """
     try:
         context = world.policy_context(proposal, flag_codes)
         if autonomy_level is not None:
             context = context.model_copy(update={"autonomy_level": autonomy_level})
+        context = merge_into(context, ledger, now=now)
     except Exception:  # fail closed: whatever went wrong, nothing may be approved on the strength of it
         log.exception("policy context could not be built for %s", proposal.id)
         failed = PolicyDecision(
@@ -104,6 +120,9 @@ def run_plan(
 ) -> PlanRunSummary:
     business_id = world.snapshot.business_id
     result = AgentPlanner(llm).run(world.snapshot, now=now)  # the slow, networked step: no lock is held yet
+    # One planning run per business at a time from here to the commit: two runs at the same instant would each read the
+    # same ledger and each approve a payment that is only inside the daily cap if the other did not happen.
+    repo_ledger.lock_business_decisions(session, business_id)
     level = repo_autonomy.get_level(session)  # read after the slow step, so it is as fresh as this run can make it
     record = result.record
     plan_dump = record.model_dump(mode="json")
@@ -113,7 +132,10 @@ def run_plan(
         if repo.get_proposal(session, proposal.id) is not None:
             known.append(proposal.id)
             continue
-        decision, context = decide_proposal(world, proposal, result.flag_codes, ruleset, autonomy_level=level)
+        ledger = current_ledger(session, business_id, now=now)  # includes what this run has already approved
+        decision, context = decide_proposal(
+            world, proposal, result.flag_codes, ruleset, autonomy_level=level, ledger=ledger, now=now
+        )
         inserted = repo.insert_proposal_if_new(
             session,
             proposal,

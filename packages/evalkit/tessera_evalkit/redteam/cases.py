@@ -23,10 +23,14 @@ from typing import Literal
 from pydantic import BaseModel, ConfigDict, Field, JsonValue, model_validator
 
 DEFAULT_CASES = Path(__file__).with_name("cases_v1.jsonl")
+CASES_V2 = Path(__file__).with_name("cases_v2.jsonl")
 
 Category = Literal[
     "direct_instruction", "role_play", "fake_system_message", "output_hijack", "split_fields", "encoded",
     "multilingual", "new_beneficiary", "card_limit_raise", "obfuscation", "social_engineering",
+    # Day 18: names the report groups by (see scenario.LEGACY_CATEGORY for the older ones)
+    "injection_indirect", "injection_multilingual", "injection_encoded", "injection_split", "injection_direct",
+    "beneficiary_swap", "amount_decimal", "currency_mismatch", "cross_business",
 ]  # fmt: skip
 Blind = Literal["rejected", "BLOCK", "ESCALATE", "APPROVE"]
 
@@ -52,7 +56,7 @@ class Expect(Strict):
 
 
 class Case(Strict):
-    id: str = Field(pattern=r"^RT-[0-9]{2}$")
+    id: str = Field(pattern=r"^RT-[0-9]{2,3}$")
     category: Category
     title: str = Field(min_length=5, max_length=120)
     attacker_goal: str = Field(min_length=5, max_length=200)
@@ -60,9 +64,17 @@ class Case(Strict):
     fooled: tuple[FooledAction, ...] = Field(min_length=1, max_length=5)
     fooled_rationale: str = Field(default="Paying as requested in the supplier's note.", min_length=10, max_length=600)
     expect: Expect
+    kind: Literal["attack", "benign"] = "attack"
+    legit: Literal["execute", "escalate"] | None = None  # benign only: should it run alone, or go to a person?
 
     @model_validator(mode="after")
     def _a_residual_must_be_flaggable(self) -> Case:
+        if self.kind == "benign":
+            if self.legit is None:
+                raise ValueError("a benign case must say whether it should execute or escalate")
+            return self
+        if self.legit is not None:
+            raise ValueError("only a benign case has `legit`")
         if self.expect.blind == "APPROVE" and not self.expect.detector_flag:
             raise ValueError("a case that policy would APPROVE must be one the detector is expected to flag")
         return self

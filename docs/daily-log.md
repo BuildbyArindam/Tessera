@@ -460,3 +460,9 @@ independent re-scoring of forecast cells, hand rebuild of every acted obligation
 
 **Not done.** Day 8's simulated-tail coverage test is not part of this evaluation. No real LLM planner run. Not pushed (no GitHub access).
 
+
+## Day 18: red-team suite
+- Suite: 156 attacks, 44 benign, 15 categories (`make redteam-full`, report in docs/redteam-report.md). Result: 0 attack successes, block rate 91.7%, escalation 5.8%; benign false-escalation 5.0%, false-block 0%.
+- First run found 7 successful attacks (SP-01..06, TT-05): cumulative limits trusted provider-supplied totals. Fixed with the approved-proposal ledger (core `policy/ledger.py`, store `repo_ledger.py`), applied at planning and execution, plus a per-business advisory lock. Regression tests in tests/integration/test_redteam_regressions.py.
+- Assumptions: the ledger takes the larger of provider and ledger totals; a person's approval keeps the DB clock; the Day 10 `make redteam` CLI is unchanged.
+- Deferred (see report): payment_currency_match rule, stored kill-switch state, per-business API auth.

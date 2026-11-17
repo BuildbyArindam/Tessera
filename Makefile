@@ -1,4 +1,4 @@
-.PHONY: setup up down test test-integration db-test-up db-test-down migrate api lint typecheck eval redteam demo fmt seed web-client web-install web-dev web-check
+.PHONY: setup up down test test-integration db-test-up db-test-down migrate api lint typecheck eval redteam demo fmt seed web-client web-install web-dev web-check redteam-full
 
 VENV := .venv
 BIN  := $(VENV)/bin
@@ -72,6 +72,9 @@ eval:  ## forecast and savings evaluation (Day 17)
 
 redteam:  ## injection red-team suite: 25 cases through sanitiser, planner and policy (Day 10); exits 1 on a violation
 	$(BIN)/python -m tessera_evalkit.redteam --out artifacts/redteam
+
+redteam-full:  ## Day 18: 150+ attacks and 40+ benign cases through the real stack (needs `make db-test-up`); writes docs/redteam-report.md
+	$(BIN)/python -m tessera_evalkit.redteam.suite --stack tessera_worker.redteam_stack:open_stack --out artifacts/redteam-full --report docs/redteam-report.md
 
 demo:  ## end-to-end scripted demo (Day 19)
 	@echo "demo: not implemented yet (Day 19)"

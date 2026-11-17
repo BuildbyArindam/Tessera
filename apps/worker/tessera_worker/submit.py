@@ -26,7 +26,7 @@ from typing import Any
 from sqlalchemy.orm import Session, sessionmaker
 from tessera_airwallex import AirwallexPort
 from tessera_airwallex.sandbox import request_id_for
-from tessera_api.planning import WorldProvider, decide_proposal
+from tessera_api.planning import WorldProvider, current_ledger, decide_proposal
 from tessera_audit import AuditEventType, AuditLog
 from tessera_audit import payloads as audit_payloads
 from tessera_core.domain import Proposal as ProposalModel
@@ -114,6 +114,9 @@ def _gate(deps: ExecDeps, proposal_id: str) -> str | int:
         fresh, context = decide_proposal(
             world, proposal, flag_codes_of(row.plan_record), deps.ruleset,
             autonomy_level=repo_autonomy.get_level(s),  # a demotion since approval is seen here and stops the action
+            # Everything else approved today, not this action against itself: the cap holds at execution too.
+            ledger=current_ledger(s, row.business_id, now=audit_now, exclude_id=proposal_id),
+            now=audit_now,
         )  # fmt: skip
         log_audit = AuditLog(s, deps.clock)
         repo.add_decision(
