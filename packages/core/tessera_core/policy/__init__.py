@@ -7,6 +7,7 @@ database or LLM imports, and no eval/exec.
 from tessera_core.policy import builtin_rules  # noqa: F401  (registers the built-in rule types)
 from tessera_core.policy.context import AutonomyLevel, ForecastConfidence, InputScreening, PolicyContext
 from tessera_core.policy.engine import POLICY_ERROR, evaluate
+from tessera_core.policy.ledger import Ledger, LedgerEntry, fold, merge_into
 from tessera_core.policy.loader import DEFAULT_RULES_DIR, load_ruleset, ruleset_from_yaml_texts
 from tessera_core.policy.registry import register_rule, registered_types
 from tessera_core.policy.rule import Rule, RuleConfig, RuleOutcome, RuleResult
@@ -18,6 +19,8 @@ __all__ = [
     "AutonomyLevel",
     "ForecastConfidence",
     "InputScreening",
+    "Ledger",
+    "LedgerEntry",
     "PolicyContext",
     "Rule",
     "RuleConfig",
@@ -28,7 +31,9 @@ __all__ = [
     "RulesetError",
     "build_ruleset",
     "evaluate",
+    "fold",
     "load_ruleset",
+    "merge_into",
     "register_rule",
     "registered_types",
     "ruleset_from_yaml_texts",
