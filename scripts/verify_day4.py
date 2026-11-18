@@ -87,8 +87,15 @@ print(per_b[per_b.loses].round(3).to_string(index=False) if per_b.loses.any() el
 print(f"losses: {int(per_b.loses.sum())} of {len(per_b)} business-horizon pairs")
 rec2 = []
 for (b, c, h), g in rows.groupby(["business_id", "currency", "horizon"]):
-    rec2.append({"b": b, "c": c, "h": h, "lgbm": wape(g.y.to_numpy(), g.lgbm.to_numpy()),
-                 "snaive": wape(g.y.to_numpy(), g.snaive.to_numpy())})
+    rec2.append(
+        {
+            "b": b,
+            "c": c,
+            "h": h,
+            "lgbm": wape(g.y.to_numpy(), g.lgbm.to_numpy()),
+            "snaive": wape(g.y.to_numpy(), g.snaive.to_numpy()),
+        }
+    )
 s2 = pd.DataFrame(rec2)
 print(f"at business x currency level: {int((s2.lgbm > s2.snaive).sum())} of {len(s2)} lose")
 

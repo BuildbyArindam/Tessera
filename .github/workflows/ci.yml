@@ -1,0 +1,111 @@
+name: CI
+
+# Lint (ruff + import-linter architecture contracts), types, unit + contract + integration tests, the README
+# number check, the red-team suite on the mock Airwallex adapter, the end-to-end demo, the dashboard build,
+# and a secrets scan. Nothing here calls Airwallex or an LLM: no secrets are needed, and none are configured.
+# `make ci` runs the Python half of this locally.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  TESSERA_AIRWALLEX_ADAPTER: mock
+
+jobs:
+  python:
+    name: Python (lint, types, tests, red team, demo)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: tessera
+          POSTGRES_PASSWORD: tessera
+          POSTGRES_DB: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U tessera"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+    env:
+      # The service user is a superuser, so the integration tests can create their own throwaway databases.
+      TEST_DATABASE_ADMIN_URL: postgresql+psycopg://tessera:tessera@localhost:5432/postgres
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install uv and the packages
+        run: |
+          pip install uv
+          make setup
+      - name: Lint and architecture contracts (import-linter, ruff)
+        run: make lint
+      - name: Type check (mypy strict on tessera_core)
+        run: make typecheck
+      - name: Unit and contract tests
+        run: make test
+      - name: Integration tests (PostgreSQL)
+        run: make test-integration
+      - name: README numbers come from the reports
+        run: make check-readme
+      - name: Red-team suite on the mock adapter (report must not drift)
+        run: make redteam-verify
+      - name: Injection suite (sanitiser, planner, policy)
+        run: make redteam
+      - name: End-to-end demo on the mock adapter
+        run: make demo
+      - name: Keep the transcripts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ci-artifacts
+          path: artifacts/
+          if-no-files-found: ignore
+
+  web:
+    name: Dashboard (client is current, types, lint, tests, build)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: apps/web/package-lock.json
+      - name: Install (the OpenAPI export needs the Python packages)
+        run: |
+          pip install uv
+          make setup
+          npm ci --prefix apps/web
+      - name: Check the generated client, typecheck, lint, test, build
+        run: make web-check
+
+  secrets:
+    name: Secrets scan (gitleaks, full history)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

@@ -50,9 +50,7 @@ log = logging.getLogger(__name__)
 ENV_VAR = "TESSERA_FX_SOURCE"
 FRANKFURTER_URL = "https://api.frankfurter.app/{start}..{end}?from=EUR&to={quotes}"
 QUOTES = ("USD", "GBP", "INR", "SGD", "AUD")
-SYNTH_NOTE = (
-    "SYNTHETIC: correlated GBM with 3-state volatility regimes; not real market data."
-)
+SYNTH_NOTE = "SYNTHETIC: correlated GBM with 3-state volatility regimes; not real market data."
 
 # --- synthetic model parameters (documented, not fitted) -----------------------
 _ANCHOR = {"USD": 1.08, "GBP": 0.85, "INR": 90.0, "SGD": 1.45, "AUD": 1.62}
@@ -163,8 +161,13 @@ def _forward_fill(obs: dict[date, dict[str, float]], start: date, end: date):
 def _write_parquet(rows, source: str, path: Path) -> list[FxRateRec]:
     recs = [
         FxRateRec(
-            date=d, base=Currency.EUR, quote=Currency(q), pair=f"EUR{q}",
-            rate=r, is_observed=obs, source=source,  # type: ignore[arg-type]
+            date=d,
+            base=Currency.EUR,
+            quote=Currency(q),
+            pair=f"EUR{q}",
+            rate=r,
+            is_observed=obs,
+            source=source,  # type: ignore[arg-type]
         )
         for d, q, r, obs in rows
     ]
@@ -205,7 +208,7 @@ class FxTable:
 def table_from_parquet(path: Path) -> FxTable:
     t = pq.read_table(path).to_pydict()
     eur_per: dict[date, dict[str, float]] = {}
-    for d, quote, rate in zip(t["date"], t["quote"], t["rate"]):
+    for d, quote, rate in zip(t["date"], t["quote"], t["rate"], strict=True):
         eur_per.setdefault(d, {"EUR": 1.0})[quote] = rate
     days = sorted(eur_per)
     return FxTable(eur_per, t["source"][0], days[0], days[-1])
@@ -235,9 +238,7 @@ def load_fx(
 
     if mode in {"auto", "ecb"}:
         try:
-            raw = _find_cached_raw(raw_dir, fetch_start, end) or _fetch_frankfurter(
-                fetch_start, end, raw_dir
-            )
+            raw = _find_cached_raw(raw_dir, fetch_start, end) or _fetch_frankfurter(fetch_start, end, raw_dir)
             obs = parse_frankfurter(json.loads(raw.read_text()))
             used, raw_name = "ecb", raw.name
         except (FxUnavailable, ValueError, json.JSONDecodeError) as exc:
@@ -257,7 +258,11 @@ def load_fx(
         "window": [str(fetch_start), str(end)],
         "raw_file": raw_name,
         "pairs": [f"EUR{q}" for q in QUOTES],
-        "note": SYNTH_NOTE if used == "synthetic" else "ECB euro foreign exchange reference rates via Frankfurter; weekends forward-filled.",
+        "note": (
+            SYNTH_NOTE
+            if used == "synthetic"
+            else "ECB euro foreign exchange reference rates via Frankfurter; weekends forward-filled."
+        ),
     }
     (fx_dir / "fx_meta.json").write_text(json.dumps(meta, indent=2) + "\n")
     return table_from_parquet(fx_dir / "fx_daily.parquet")

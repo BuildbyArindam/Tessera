@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import numpy as np
 import pandas as pd
+from numpy.typing import NDArray
 
 from tessera_core.forecast.history import History
 from tessera_core.forecast.target import last_complete_week_start, series_by_key, weekly_net_cashflow
@@ -51,7 +52,8 @@ def _expected_delay_days(inv: pd.DataFrame) -> np.ndarray:
     merged = inv[["business_id", "customer_id"]].merge(cust, how="left", on=["business_id", "customer_id"])
     merged = merged.merge(biz, how="left", on="business_id")
     out = np.where(merged["cust_delay"].isna(), merged["biz_delay"], merged["cust_delay"])
-    return np.nan_to_num(out.astype(float), nan=0.0)
+    result: NDArray[np.float64] = np.nan_to_num(out.astype(float), nan=0.0)
+    return result
 
 
 def _invoice_features(inv: pd.DataFrame, business_id: str, currency: str, as_of: pd.Timestamp) -> dict[str, float]:

@@ -25,7 +25,10 @@ MONTHS = 18
 def ds(tmp_path_factory):
     root = tmp_path_factory.mktemp("d7")
     m = gen.generate(7, root, fx_source="synthetic")
-    rd = lambda n: pq.read_table(root / "synthetic" / f"{n}.parquet").to_pylist()
+
+    def rd(n: str) -> list[dict]:
+        return pq.read_table(root / "synthetic" / f"{n}.parquet").to_pylist()
+
     return root, m, {n: rd(n) for n in m["rows"]}
 
 
@@ -46,14 +49,21 @@ def test_shape(ds):
     _, m, t = ds
     assert m["rows"]["businesses"] == 12
     archs = [b["archetype"] for b in t["businesses"]]
-    assert {a: archs.count(a) for a in set(archs)} == {
-        "solo_freelancer": 4, "small_agency": 4, "product_exporter": 4}
+    assert {a: archs.count(a) for a in set(archs)} == {"solo_freelancer": 4, "small_agency": 4, "product_exporter": 4}
     assert m["as_of"] == "2026-06-30"
 
 
-@pytest.mark.parametrize("name,model", [
-    ("businesses", BusinessRec), ("customers", CustomerRec), ("invoices", InvoiceRec),
-    ("payments", PaymentRec), ("ground_truth", GroundTruthRec), ("outflows", OutflowRec)])
+@pytest.mark.parametrize(
+    "name,model",
+    [
+        ("businesses", BusinessRec),
+        ("customers", CustomerRec),
+        ("invoices", InvoiceRec),
+        ("payments", PaymentRec),
+        ("ground_truth", GroundTruthRec),
+        ("outflows", OutflowRec),
+    ],
+)
 def test_parquet_rows_revalidate(ds, name, model):
     for row in ds[2][name][:500]:
         model.model_validate(row)
@@ -110,6 +120,7 @@ def _target(d: date, day: int) -> date:
 
 def _last(d: date) -> int:
     import calendar
+
     return calendar.monthrange(d.year, d.month)[1]
 
 
@@ -121,25 +132,33 @@ def test_bad_outcome_rate_about_two_percent(ds):
 
 def test_customer_types_present_per_business_and_ordered_delays(ds):
     import statistics as st
+
     t = ds[2]
     for b in t["businesses"]:
         types = {g["customer_type"] for g in t["ground_truth"] if g["business_id"] == b["business_id"]}
         assert {"chronic_late", "seasonal_late", "prompt"} <= types
-    med = lambda ty: st.median(g["days_past_due"] for g in t["ground_truth"]
-                               if g["customer_type"] == ty and g["outcome"] == "paid")
+
+    def med(ty: str) -> float:
+        return st.median(
+            g["days_past_due"] for g in t["ground_truth"] if g["customer_type"] == ty and g["outcome"] == "paid"
+        )
+
     assert med("prompt") < med("typical") < med("chronic_late")
     assert med("chronic_late") > 20
 
 
 def test_delays_right_skewed_lognormal_like(ds):
     import statistics as st
-    d = [g["days_past_due"] for g in ds[2]["ground_truth"]
-         if g["customer_type"] == "typical" and g["outcome"] == "paid"]
+
+    d = [
+        g["days_past_due"] for g in ds[2]["ground_truth"] if g["customer_type"] == "typical" and g["outcome"] == "paid"
+    ]
     assert st.mean(d) > st.median(d)
 
 
 def test_seasonality_december_dip_and_quarter_end_spike(ds):
     from collections import Counter
+
     c = Counter((i["invoice_date"].year, i["invoice_date"].month) for i in ds[2]["invoices"])
     # compare within 2025 only to avoid growth confounding the spike test
     nov, dec = c[(2025, 11)], c[(2025, 12)]
@@ -179,7 +198,7 @@ def test_fx_synthetic_labelled_and_forward_filled(ds):
         FxRateRec.model_validate(r)
     eurusd = [r for r in rows if r["pair"] == "EURUSD"]
     days = [r["date"] for r in eurusd]
-    assert days == sorted(days) and all((b - a).days == 1 for a, b in zip(days, days[1:]))
+    assert days == sorted(days) and all((b - a).days == 1 for a, b in zip(days, days[1:], strict=False))
     by = {r["date"]: r for r in eurusd}
     for d, r in by.items():
         if d.weekday() >= 5:
@@ -204,8 +223,9 @@ def test_fx_env_var_switch_and_ecb_strict(tmp_path, monkeypatch):
     with pytest.raises(ValueError):
         fxmod.load_fx(date(2025, 1, 1), date(2025, 3, 31), seed=1, data_dir=tmp_path)
     monkeypatch.setenv(fxmod.ENV_VAR, "ecb")
-    monkeypatch.setattr(fxmod, "_fetch_frankfurter",
-                        lambda *a, **k: (_ for _ in ()).throw(fxmod.FxUnavailable("offline")))
+    monkeypatch.setattr(
+        fxmod, "_fetch_frankfurter", lambda *a, **k: (_ for _ in ()).throw(fxmod.FxUnavailable("offline"))
+    )
     with pytest.raises(fxmod.FxUnavailable):
         fxmod.load_fx(date(2025, 1, 1), date(2025, 3, 31), seed=1, data_dir=tmp_path / "x")
 
@@ -214,15 +234,21 @@ def test_ecb_path_via_cached_raw_file(tmp_path, monkeypatch):
     """Real-source path, offline: a raw Frankfurter file on disk is parsed and forward-filled."""
     raw = tmp_path / "fx" / "raw"
     raw.mkdir(parents=True)
-    payload = {"base": "EUR", "start_date": "2025-01-02", "end_date": "2025-01-08", "rates": {
-        "2025-01-02": {"USD": 1.04, "GBP": 0.83, "INR": 89.0, "SGD": 1.41, "AUD": 1.67},
-        "2025-01-03": {"USD": 1.03, "GBP": 0.83, "INR": 88.9, "SGD": 1.41, "AUD": 1.66},
-        "2025-01-06": {"USD": 1.03, "GBP": 0.83, "INR": 88.7, "SGD": 1.41, "AUD": 1.66}}}
+    payload = {
+        "base": "EUR",
+        "start_date": "2025-01-02",
+        "end_date": "2025-01-08",
+        "rates": {
+            "2025-01-02": {"USD": 1.04, "GBP": 0.83, "INR": 89.0, "SGD": 1.41, "AUD": 1.67},
+            "2025-01-03": {"USD": 1.03, "GBP": 0.83, "INR": 88.9, "SGD": 1.41, "AUD": 1.66},
+            "2025-01-06": {"USD": 1.03, "GBP": 0.83, "INR": 88.7, "SGD": 1.41, "AUD": 1.66},
+        },
+    }
     (raw / "frankfurter_EUR_2024-12-25_2025-01-08.json").write_text(json.dumps(payload))
     monkeypatch.setattr(fxmod, "_fetch_frankfurter", lambda *a, **k: pytest.fail("network used"))
     t = fxmod.load_fx(date(2025, 1, 1), date(2025, 1, 8), seed=1, data_dir=tmp_path, source="ecb")
     assert t.source == "ecb"
-    assert t.rate(date(2025, 1, 4), "EUR", "USD") == 1.03   # Saturday forward-filled from Friday
+    assert t.rate(date(2025, 1, 4), "EUR", "USD") == 1.03  # Saturday forward-filled from Friday
     assert t.rate(date(2025, 1, 5), "EUR", "USD") == 1.03
     assert t.rate(date(2025, 1, 2), "EUR", "USD") == 1.04
 

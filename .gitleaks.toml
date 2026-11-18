@@ -1,0 +1,14 @@
+# gitleaks configuration (Day 20). Run in CI by .github/workflows/ci.yml and locally by `make secrets`.
+# Default rules stay on. The allowlist below covers only placeholders that appear in tests, demos and local-only
+# development databases; none of them is a credential for anything.
+title = "Tessera gitleaks config"
+
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Placeholders used by tests and demos, and the local development database"
+regexes = [
+  '''(e2e-demo-key|demo-key-0|verify-day[0-9]+-key-|redteam-key|wrong-key|test-key-0|export-only|whsec-test|whsec-guess|sk-live-SECRET-123)[A-Za-z0-9_-]*''',
+  '''postgresql(\+psycopg)?://tessera:tessera@(localhost|127\.0\.0\.1)''',
+]

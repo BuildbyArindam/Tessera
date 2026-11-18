@@ -1,4 +1,4 @@
-.PHONY: setup up down test test-integration db-test-up db-test-down migrate api lint typecheck eval redteam demo fmt seed web-client web-install web-dev web-check redteam-full agent-eval e2e-demo
+.PHONY: setup up down test test-integration db-test-up db-test-down migrate api lint typecheck eval redteam demo fmt seed web-client web-install web-dev web-check redteam-full agent-eval e2e-demo check-readme redteam-verify secrets ci
 
 VENV := .venv
 BIN  := $(VENV)/bin
@@ -8,7 +8,7 @@ setup:  ## create venv and install all packages in editable mode
 	uv pip install --python $(BIN)/python \
 		-e packages/core -e packages/airwallex -e packages/agent \
 		-e packages/store -e packages/audit -e packages/evalkit -e apps/api -e apps/worker \
-		pytest pytest-cov hypothesis respx ruff mypy pre-commit import-linter types-PyYAML
+		pytest pytest-cov hypothesis respx ruff==0.17.5 mypy==2.4.1 pre-commit import-linter types-PyYAML
 
 up:  ## start postgres (api, worker and web services land on Days 13 to 16)
 	docker compose up -d --wait postgres
@@ -84,3 +84,16 @@ e2e-demo:  ## Day 19: Playwright drives the same flow through the dashboard (nee
 
 demo:  ## Day 19: seed, ingest a USD invoice, run the worker, escalate, approve, execute on the mock, webhook, verify the chain (needs `make db-test-up`)
 	$(BIN)/python scripts/demo.py
+
+check-readme:  ## Day 20: every number in README.md appears in a report under docs/ (or is allowlisted with a reason)
+	$(BIN)/python scripts/check_readme_numbers.py
+
+redteam-verify:  ## Day 20: re-run the full red-team suite into artifacts/ and fail if docs/redteam-report.md would change (needs a database)
+	$(BIN)/python -m tessera_evalkit.redteam.suite --stack tessera_worker.redteam_stack:open_stack --out artifacts/redteam-full --report artifacts/redteam-report.md
+	diff docs/redteam-report.md artifacts/redteam-report.md
+
+secrets:  ## Day 20: gitleaks over the working tree and the full git history (needs the gitleaks binary on PATH)
+	gitleaks detect --source . --config .gitleaks.toml --redact --verbose
+
+ci:  ## the commands CI runs, in order. Needs a database: `make db-test-up`, or set TEST_DATABASE_ADMIN_URL
+	$(MAKE) lint typecheck test test-integration check-readme redteam-verify redteam demo

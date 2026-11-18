@@ -475,3 +475,14 @@ independent re-scoring of forecast cells, hand rebuild of every acted obligation
 - `make e2e-demo`: Playwright drives the same flow in the dashboard (ports 8019/8039/3019, DB tessera_e2e19).
 - Findings, not fixed: nothing marks a payable PAID after its payout settles, so the planner re-proposes the same gap; the production world provider is still a TODO; the audit head hash differs between runs; same-currency PAY_SUPPLIER has no simulation yet is approved.
 - Lint: E501 is ignored per file for the prose-heavy Day 19 files. Earlier days' scripts/evalkit files (33 E501/I errors, 11 unformatted) and 3 mypy errors in tessera_core/forecast predate this day.
+
+
+## Day 20: documentation, CI and release prep
+- README (problem, five results lines, diagram, five-command quickstart, Safety design, Limitations), `docs/architecture.md`, `docs/threat-model.md`, final `docs/policy-spec.md`, `docs/demo-script.md` (3:00), `docs/submission.md` (365 words).
+- `scripts/check_readme_numbers.py` (`make check-readme`): every number in the README must appear in eval, red-team or agent-eval reports; allowlist in `scripts/readme_numbers_allow.txt` (3.11, 1219, 219). Also run on the submission and demo script.
+- CI (`.github/workflows/ci.yml`): lint with import contracts, mypy strict, unit and integration tests on postgres:16, README check, red-team drift check, demo, dashboard build, gitleaks on full history. `make ci` runs the Python half locally.
+- Cleared the baseline lint and type debt noted on Day 19 (ruff, ruff format and mypy are clean). Pinned ruff 0.17.5 and mypy 2.4.1.
+- Secrets: gitleaks could not be installed here (proxy blocked `go install`), so it has **not** been run locally; CI runs it. Substitutes: regex scans over history and detect-secrets over the tree found no credentials. `tessera-day5-files.zip` was a stray archive tracked in history; removed from the tree and `*.zip` ignored. History was not rewritten.
+- Local run: `make test` 1228 passed, 18 skipped; `make test-integration` 219 passed; demo, red-team drift check and `make web-check` pass. README and allowlist updated to 1228.
+- Assumptions: threat-model residual risks follow the Day 18 report; no license added (the owner's choice); the demo script's timings are estimates, not rehearsed.
+- Not verified: the CI workflow itself (no actionlint, never run on GitHub); the Docker Compose path.

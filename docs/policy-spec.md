@@ -1,9 +1,10 @@
 # Policy engine specification
 
-Status: Day 10 (core engine and twelve rules, property-tested; the tenth is simulation-based, the
-eleventh, `untrusted_input_gate`, reads the prompt-injection screening result, and the twelfth,
-`early_payment_gate`, escalates payments made well before they are due).
-Day 14 adds the thirteenth rule, `autonomy_level_gate` (below).
+Status: **final for the hackathon submission (Day 20).** Thirteen rules, property-tested, run twice per action
+(at planning and again at execution). Sections still labelled with the day that introduced them
+describe behaviour as built; the ledger (Day 18) and the execution-time check (Day 13) are described in
+their own sections below, and [Known limits](#known-limits) lists what this specification does not guarantee.
+Companion documents: [architecture.md](architecture.md), [threat-model.md](threat-model.md).
 
 ## What it is
 
@@ -23,7 +24,7 @@ database, no LLM. The same proposal, context and rules always produce the same d
 ## The call
 
 ```python
-decision = evaluate(proposal, context, ruleset)   # -> PolicyDecision
+decision = evaluate(proposal, context, ruleset)  # -> PolicyDecision
 ```
 
 - **proposal**: what is being asked (`action_type`, `params`, `rationale`, `confidence`). The
@@ -87,6 +88,28 @@ Rates are never taken from a proposal: the reference rate and the executable quo
 context, so the planner cannot name the rate it is judged against.
 
 ## Rules in force today
+
+| # | Rule | Applies to | Objects with | Section |
+| --- | --- | --- | --- | --- |
+| 1 | `kill_switch` | every action | BLOCK | below |
+| 2 | `max_amount_per_action` | CONVERT, PAY_SUPPLIER, TOPUP_CARD | BLOCK | below |
+| 3 | `daily_cumulative_cap` | CONVERT, PAY_SUPPLIER, TOPUP_CARD | BLOCK | Day 7 rules |
+| 4 | `beneficiary_allowlist` | PAY_SUPPLIER | BLOCK, or ESCALATE inside the cooldown | Day 7 rules |
+| 5 | `currency_concentration_cap` | CONVERT | BLOCK | Day 7 rules |
+| 6 | `forecast_confidence_gate` | CONVERT, PAY_SUPPLIER, TOPUP_CARD | ESCALATE | Day 7 rules |
+| 7 | `quote_slippage_guard` | CONVERT | BLOCK | Day 7 rules |
+| 8 | `velocity_limit` | CONVERT, PAY_SUPPLIER, TOPUP_CARD | BLOCK | Day 7 rules |
+| 9 | `card_limit_cap` | TOPUP_CARD | BLOCK | Day 7 rules |
+| 10 | `worst_case_loss_gate` | CONVERT, PAY_SUPPLIER | ESCALATE, or BLOCK on a mismatched simulation | Day 8 |
+| 11 | `untrusted_input_gate` | every action | ESCALATE only | Day 10 |
+| 12 | `early_payment_gate` | PAY_SUPPLIER | ESCALATE only | Day 10 |
+| 13 | `autonomy_level_gate` | every action | BLOCK (action not allowed at the level), ESCALATE (over the level's cap) | Day 14 |
+
+Four rules exist to turn doubt, rather than a breached limit, into a person's decision: `forecast_confidence_gate`
+(the forecast is too uncertain, or missing), `worst_case_loss_gate` (the simulated downside is too large, or missing),
+`untrusted_input_gate` (third-party text was flagged, or never screened) and `early_payment_gate` (a payment well ahead of
+its due date). That is the mechanism behind "uncertainty drives behaviour". `beneficiary_allowlist` (cooldown) and
+`autonomy_level_gate` (over the level's cap) can also escalate.
 
 ### `kill_switch` (required)
 
@@ -225,6 +248,39 @@ Why it exists: red-team case RT-03 told a fooled model to pay an approved suppli
 early. Every other rule passed it, so with the detector bypassed it was approved and executed. It is now
 escalated by this rule alone, with or without the detector.
 
+## Cumulative limits and the ledger (Day 18)
+
+`daily_cumulative_cap`, `velocity_limit` and `card_limit_cap` judge a proposal against totals in the context. The Day 18
+red team showed that totals supplied by a data provider are not safe to trust: a provider that reported none made each
+piece of a split payment look like the first, and seven attacks executed. The totals now have one authority, the approved
+proposals themselves.
+
+- `tessera_core.policy.ledger.fold` computes, from plain entries, today's spend per currency, the approval times in the last
+  hour and the card total for the calendar month (UTC). Entries are proposals that were APPROVED, SUBMITTED or SETTLED;
+  rejected, blocked and failed ones do not count. An entry whose amount cannot be read is skipped.
+- `merge_into` applies the totals to the context taking the **larger** of the provider's figure and the ledger's, so a
+  provider can add to the ledger and never lower it.
+- The caller reads the entries under a per-business advisory lock, so two planning runs cannot both read the same empty
+  ledger. The engine itself stays pure: it reads no clock and no database.
+- The ledger is applied at planning and again at execution, with the proposal itself excluded, so a person's later approval
+  cannot push the day past the cap.
+
+## Policy runs twice (Day 13)
+
+Approval, by policy or by a person, describes the world at one moment. Before anything is sent, the worker runs policy again
+with fresh context (phase "execution") and `tessera_worker.gate.effective_verdict` turns the new verdict into what happens next.
+
+| Fresh verdict | Approval was | Outcome |
+| --- | --- | --- |
+| BLOCK | anything | Stop. Nothing overrides a block, including a human approval. |
+| APPROVE | anything | Go. |
+| ESCALATE | a person's, and it covered this | Go. "Covered" means the same ruleset hash, and every rule that escalates now also escalated when the person looked. |
+| ESCALATE | a person's, but a new rule escalates or the ruleset changed | Back to a person. |
+| ESCALATE | none | Back to a person. |
+
+An execution whose key is already stored is not cancelled when the fresh check no longer passes, because the first call may
+have gone through; it is held for a person, as is one older than the vendor's duplicate window.
+
 ## Simulation (Day 8)
 
 `tessera_core.simulate.simulate(proposal, fx_history, as_of, n_paths, seed, *, due_date, config)` replays
@@ -279,7 +335,7 @@ number for its logic, and its validated parameters in a canonical form. So:
 Every decision carries the hash, and the audit log (Day 11) stores it, so any decision can be tied
 to the exact rules that produced it.
 
-## Adding a rule (for Day 7 onward)
+## Adding a rule
 
 1. Subclass `Rule` with a config model, set `type_name` and, if needed, `required_context`.
 2. Return `PASS` / `ESCALATE` / `BLOCK`; build reasons only from validated values and fixed text,
@@ -287,7 +343,7 @@ to the exact rules that produced it.
 3. Decorate with `@register_rule` and import the module in `builtin_rules/__init__.py`.
 4. Add a YAML file and tests, including a failure and a boundary case.
 
-## Property tests (Day 7)
+## Property tests
 
 `tests/unit/test_policy_properties.py` uses Hypothesis (500 examples per property) to check four
 invariants against the shipped ruleset, with generated proposals (valid ones, and ones with one to
@@ -306,15 +362,21 @@ Monotonicity is a property of the shipped rules (each limit only gets tighter as
 and the other checks ignore the amount). A future rule that is not monotonic in the amount, such as
 "escalate small amounts, approve large ones", would fail it and must be reconsidered.
 
-## Known limits at Day 7
+## Known limits
 
-- (Day 14 added `autonomy_level_gate`; see the next section.)
-- `daily_cumulative_cap`, `velocity_limit` and `card_limit_cap` trust the caller's counters
-  (`spend_today`, `recent_approval_times`, `card_loaded_this_month`). Two proposals decided at the same
-  moment from the same snapshot could both pass; the worker must serialise decisions or re-check at
-  execution time (Day 13).
-- Limits are single global values (and per-vendor for cards), not per business; per-customer
-  configuration comes later. Defaults are illustrative.
+- `daily_cumulative_cap`, `velocity_limit` and `card_limit_cap` read totals from the context, and the ledger (above) is what
+  makes those totals trustworthy: it takes the larger of the caller's figure and the approved proposals. The engine
+  alone does not guarantee it; a caller that bypasses `decide_proposal` and builds a context by hand gets only what it supplies.
+- Limits are single global values (and per-vendor for cards), not per business. Defaults are illustrative, not
+  recommendations.
+- There is no rule that judges currency consistency of a payout (the obligation's, the beneficiary's and the proposal's
+  currencies). The dispatcher and the vendor refuse a mismatch; a `payment_currency_match` rule is recommended in the
+  red-team report and was left out so the Day 17 evaluation numbers would not move.
+- The kill switch state comes from the world provider. Unlike the autonomy level it has no stored row of its own.
+- In-envelope actions that injected text asks for (a small payment to an approved payee that an email requests) are allowed
+  by design; the detector's ESCALATE is the only barrier, and the detector has known misses (see below and the red-team report).
+- The ledger reads UTC calendar days and months and counts a person's approval at the database clock; the policy engine is
+  given `now` and never reads a clock.
 - Slippage compares against a reference rate the caller supplies; if that source is wrong, the check
   is only as good as it is.
 - Currencies are compared one at a time. There is no cross-currency total (for example, a daily cap

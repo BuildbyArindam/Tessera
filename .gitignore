@@ -11,3 +11,6 @@ artifacts/
 # Playwright
 apps/web/e2e-artifacts/
 apps/web/playwright-report/
+
+# Hand-over archives are not part of the repository
+*.zip

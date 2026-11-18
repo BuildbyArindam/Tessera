@@ -51,7 +51,7 @@ def weekly_net_cashflow(cashflows: pd.DataFrame, as_of: pd.Timestamp | None = No
 
     frames: list[pd.DataFrame] = []
     for key, grp in df.groupby(["business_id", "currency"], sort=True):
-        business_id, currency = key  # type: ignore[misc]
+        business_id, currency = key  # type: ignore[misc, unused-ignore]
         weekly = grp.groupby("week_start")["amount"].sum()
         idx = pd.date_range(weekly.index.min(), end_all, freq="7D")
         weekly = weekly.reindex(idx, fill_value=0.0)
@@ -74,7 +74,7 @@ def series_by_key(weekly: pd.DataFrame) -> dict[tuple[str, str], pd.Series]:
     """Split the long frame into one Series (index=week_start) per key."""
     out: dict[tuple[str, str], pd.Series] = {}
     for key, grp in weekly.groupby(["business_id", "currency"], sort=True):
-        business_id, currency = key  # type: ignore[misc]
+        business_id, currency = key  # type: ignore[misc, unused-ignore]
         out[(str(business_id), str(currency))] = pd.Series(
             grp["net"].to_numpy(dtype=float), index=pd.DatetimeIndex(grp["week_start"]), name="net"
         )

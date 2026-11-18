@@ -110,7 +110,9 @@ def worker(url: str, pickle_path: str, kill_at: str) -> None:
 
     port = PersistentMock(Path(pickle_path), None if kill_at == "none" else kill_at)
     factory = make_session_factory(make_engine(url))
-    deps = loop_deps(exec_deps(factory, port, ChangingWorld(FixtureWorldProvider())), lambda: scripted_llm(APPROVE_ITEM))
+    deps = loop_deps(
+        exec_deps(factory, port, ChangingWorld(FixtureWorldProvider())), lambda: scripted_llm(APPROVE_ITEM)
+    )
     report = run_cycle(deps)
     port.save()
     print(f"   worker pid {os.getpid()} finished a cycle: {dict(report)}   mock EUR = {eur(port)}")
@@ -224,7 +226,9 @@ def part_c() -> None:
         print("2. restart the worker (same database, same mock state, no kill):")
         spawn(url, path, "none")
         table(url)
-        print(f"   FINAL mock EUR balance: {eur(PersistentMock(path))}   => debited exactly once (50000 - 1000 = 49000.00)")
+        print(
+            f"   FINAL mock EUR balance: {eur(PersistentMock(path))}   => debited exactly once (50000 - 1000 = 49000.00)"
+        )
         print("3. a third restart changes nothing:")
         spawn(url, path, "none")
         print(f"   mock EUR balance: {eur(PersistentMock(path))}")
@@ -323,17 +327,20 @@ def audit_trail(url: str) -> None:
 def part_f() -> None:
     banner("(f) one full cycle for a small conversion (EUR 1000 -> INR) and its audit trail")
     live = all(os.environ.get(k) for k in ("AIRWALLEX_CLIENT_ID", "AIRWALLEX_API_KEY"))
-    print(f"real sandbox credentials present: {live}.  The real sandbox is {'reachable?' if live else 'NOT being used.'}")
+    print(
+        f"real sandbox credentials present: {live}.  The real sandbox is {'reachable?' if live else 'NOT being used.'}"
+    )
     if not live:
-        print("No AIRWALLEX_* credentials in this session and api.sandbox.airwallex.com is refused by the egress proxy, so a"
-              "\nrun against the REAL sandbox is impossible here. Below: the same cycle through SandboxAirwallex (the real"
-              "\nHTTP adapter: auth, quote, request_id lookup, conversion) against the in-repo fake server (respx).")
+        print(
+            "No AIRWALLEX_* credentials in this session and api.sandbox.airwallex.com is refused by the egress proxy, so a"
+            "\nrun against the REAL sandbox is impossible here. Below: the same cycle through SandboxAirwallex (the real"
+            "\nHTTP adapter: auth, quote, request_id lookup, conversion) against the in-repo fake server (respx)."
+        )
     import respx
     from fake_airwallex import FakeAirwallex
     from pydantic import SecretStr
     from tessera_airwallex import SandboxAirwallex
-    from tessera_airwallex._http import SandboxConfig
-    from tessera_airwallex._http import SandboxHttp
+    from tessera_airwallex._http import SandboxConfig, SandboxHttp
     from tessera_worker.loop import run_cycle
 
     url = new_db()

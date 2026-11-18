@@ -36,9 +36,7 @@ class Money(DomainModel):
     @classmethod
     def _coerce_amount(cls, value: object) -> Decimal:
         if isinstance(value, bool | float):
-            raise ValueError(
-                "amount must be a Decimal, int or str; floats and bools are not allowed for money"
-            )
+            raise ValueError("amount must be a Decimal, int or str; floats and bools are not allowed for money")
         if isinstance(value, Decimal):
             parsed = value
         elif isinstance(value, int | str):
@@ -79,9 +77,7 @@ class Money(DomainModel):
     # ------------------------------------------------------------------ arithmetic
     def _require_same_currency(self, other: "Money") -> None:
         if self.currency != other.currency:
-            raise CurrencyMismatchError(
-                f"cannot combine {self.currency.value} with {other.currency.value}"
-            )
+            raise CurrencyMismatchError(f"cannot combine {self.currency.value} with {other.currency.value}")
 
     def __add__(self, other: object) -> "Money":
         if not isinstance(other, Money):

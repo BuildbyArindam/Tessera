@@ -13,7 +13,7 @@ try:
 except ImportError:  # pragma: no cover - standalone fallback
     from enum import Enum
 
-    class Currency(str, Enum):  # type: ignore[no-redef]
+    class Currency(str, Enum):  # type: ignore[no-redef]  # noqa: UP042 - mirrors tessera_core's definition
         USD = "USD"
         EUR = "EUR"
         GBP = "GBP"

@@ -18,6 +18,7 @@ extend-immutable-calls = ["fastapi.Depends", "fastapi.Query", "fastapi.Path", "f
 "packages/evalkit/tessera_evalkit/agent_eval/*" = ["E501"]
 "apps/worker/tessera_worker/demo_stack.py" = ["E501"]
 "scripts/demo.py" = ["E501"]
+"scripts/verify_day*.py" = ["E501"]  # one-off verification transcripts
 "scripts/build_scenarios.py" = ["E501"]
 "scripts/serve_day19_demo.py" = ["E501"]
 

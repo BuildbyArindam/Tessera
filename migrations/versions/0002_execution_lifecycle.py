@@ -51,7 +51,9 @@ def downgrade() -> None:
     bind = op.get_bind()
     stuck = bind.scalar(sa.text("SELECT count(*) FROM proposals WHERE status IN ('SUBMITTED', 'SETTLED', 'FAILED')"))
     if stuck:
-        raise RuntimeError(f"cannot downgrade: {stuck} proposals are SUBMITTED, SETTLED or FAILED and 0001 has no such status")
+        raise RuntimeError(
+            f"cannot downgrade: {stuck} proposals are SUBMITTED, SETTLED or FAILED and 0001 has no such status"
+        )
     op.drop_table("webhook_events")
     op.drop_index("ix_executions_vendor_request_id", table_name="executions")
     op.drop_index("ix_executions_external_id", table_name="executions")

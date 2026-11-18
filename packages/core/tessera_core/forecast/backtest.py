@@ -37,7 +37,9 @@ class Fold:
             raise ValueError(f"fold leaks: train_end {self.train_end} >= test_start {self.test_start}")
 
 
-def _origins(weekly_full: pd.DataFrame, horizons: Sequence[int], min_train_weeks: int, step_weeks: int) -> list[pd.Timestamp]:
+def _origins(
+    weekly_full: pd.DataFrame, horizons: Sequence[int], min_train_weeks: int, step_weeks: int
+) -> list[pd.Timestamp]:
     first = weekly_full["week_start"].min()
     last_week = weekly_full["week_start"].max()
     first_origin = first + pd.Timedelta(weeks=min_train_weeks) - pd.Timedelta(days=1)

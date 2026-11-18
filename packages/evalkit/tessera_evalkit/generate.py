@@ -70,22 +70,52 @@ QUARTER_END_MONTHS = (3, 6, 9, 12)
 
 ARCH: dict[str, dict] = {
     "solo_freelancer": dict(
-        label="Freelance", n_cust=(4, 8), rate=(0.7, 1.2), median=(600, 2000),
-        cur_w={"USD": 0.60, "EUR": 0.25, "GBP": 0.15}, n_emp=(1, 1), salary=(35_000, 55_000),
-        n_sup=(1, 2), sup_med=(300, 900), sup_rate=0.7, n_saas=(3, 5), saas=(10, 60),
-        growth=(0.05, 0.35), payroll_days=(1, 7, 25, 28),
+        label="Freelance",
+        n_cust=(4, 8),
+        rate=(0.7, 1.2),
+        median=(600, 2000),
+        cur_w={"USD": 0.60, "EUR": 0.25, "GBP": 0.15},
+        n_emp=(1, 1),
+        salary=(35_000, 55_000),
+        n_sup=(1, 2),
+        sup_med=(300, 900),
+        sup_rate=0.7,
+        n_saas=(3, 5),
+        saas=(10, 60),
+        growth=(0.05, 0.35),
+        payroll_days=(1, 7, 25, 28),
     ),
     "small_agency": dict(
-        label="Studio", n_cust=(10, 18), rate=(0.6, 1.1), median=(1200, 3200),
-        cur_w={"USD": 0.40, "EUR": 0.35, "GBP": 0.25}, n_emp=(5, 5), salary=(85_000, 140_000),
-        n_sup=(2, 4), sup_med=(1500, 4000), sup_rate=1.0, n_saas=(4, 7), saas=(20, 180),
-        growth=(0.10, 0.50), payroll_days=(1, 7, 25, 28),
+        label="Studio",
+        n_cust=(10, 18),
+        rate=(0.6, 1.1),
+        median=(1200, 3200),
+        cur_w={"USD": 0.40, "EUR": 0.35, "GBP": 0.25},
+        n_emp=(5, 5),
+        salary=(85_000, 140_000),
+        n_sup=(2, 4),
+        sup_med=(1500, 4000),
+        sup_rate=1.0,
+        n_saas=(4, 7),
+        saas=(20, 180),
+        growth=(0.10, 0.50),
+        payroll_days=(1, 7, 25, 28),
     ),
     "product_exporter": dict(
-        label="Exports", n_cust=(12, 25), rate=(0.6, 1.3), median=(2500, 7000),
-        cur_w={"USD": 0.45, "EUR": 0.35, "GBP": 0.20}, n_emp=(9, 14), salary=(30_000, 70_000),
-        n_sup=(3, 5), sup_med=(6000, 20000), sup_rate=1.3, n_saas=(3, 6), saas=(15, 120),
-        growth=(0.05, 0.40), payroll_days=(1, 7, 25, 28),
+        label="Exports",
+        n_cust=(12, 25),
+        rate=(0.6, 1.3),
+        median=(2500, 7000),
+        cur_w={"USD": 0.45, "EUR": 0.35, "GBP": 0.20},
+        n_emp=(9, 14),
+        salary=(30_000, 70_000),
+        n_sup=(3, 5),
+        sup_med=(6000, 20000),
+        sup_rate=1.3,
+        n_saas=(3, 6),
+        saas=(15, 120),
+        growth=(0.05, 0.40),
+        payroll_days=(1, 7, 25, 28),
     ),
 }
 
@@ -99,15 +129,70 @@ DELAY = {
 SEASONAL_STRETCHES = ((3, 6, 9, 12), (12, 1), (7, 8))
 SEASONAL_MULT = 3.0
 
-_FIRST = ("Northwind", "Bluepeak", "Lumen", "Kestrel", "Orchard", "Harbor", "Ivory", "Summit",
-          "Quill", "Marlow", "Tidewater", "Cobalt", "Juniper", "Atlas", "Foxglove", "Granite",
-          "Helix", "Meridian", "Nimbus", "Obsidian", "Pinecrest", "Redwood", "Sable", "Thistle")
-_SECOND = ("Labs", "Trading", "Partners", "Studio", "Group", "Ltd", "GmbH", "Co", "Systems",
-           "Retail", "Media", "Works", "Holdings", "Collective")
-_SAAS = ("Workspace Suite", "Design Tool", "Code Hosting", "Cloud Compute", "Project Tracker",
-         "Video Calls", "Email Platform", "Analytics", "Password Vault", "Accounting App")
-_SUP = ("Pacific Components", "Lion City Logistics", "Harbourline Freight", "Sydney Packaging",
-        "Coral Textiles", "Merlion Prints", "Outback Materials", "Orchid Fabrication")
+_FIRST = (
+    "Northwind",
+    "Bluepeak",
+    "Lumen",
+    "Kestrel",
+    "Orchard",
+    "Harbor",
+    "Ivory",
+    "Summit",
+    "Quill",
+    "Marlow",
+    "Tidewater",
+    "Cobalt",
+    "Juniper",
+    "Atlas",
+    "Foxglove",
+    "Granite",
+    "Helix",
+    "Meridian",
+    "Nimbus",
+    "Obsidian",
+    "Pinecrest",
+    "Redwood",
+    "Sable",
+    "Thistle",
+)
+_SECOND = (
+    "Labs",
+    "Trading",
+    "Partners",
+    "Studio",
+    "Group",
+    "Ltd",
+    "GmbH",
+    "Co",
+    "Systems",
+    "Retail",
+    "Media",
+    "Works",
+    "Holdings",
+    "Collective",
+)
+_SAAS = (
+    "Workspace Suite",
+    "Design Tool",
+    "Code Hosting",
+    "Cloud Compute",
+    "Project Tracker",
+    "Video Calls",
+    "Email Platform",
+    "Analytics",
+    "Password Vault",
+    "Accounting App",
+)
+_SUP = (
+    "Pacific Components",
+    "Lion City Logistics",
+    "Harbourline Freight",
+    "Sydney Packaging",
+    "Coral Textiles",
+    "Merlion Prints",
+    "Outback Materials",
+    "Orchid Fabrication",
+)
 
 
 # ------------------------------------------------------------------ helpers ---
@@ -165,8 +250,11 @@ def _gen_business(seed: int, idx: int, archetype: str, start: date, months: int)
     mstarts = month_starts(start, months)
 
     biz = BusinessRec(
-        business_id=bid, name=f"{_name(r, used)} ({cfg['label']})", archetype=archetype,
-        base_currency="INR", payroll_day=int(r.choice(cfg["payroll_days"])),
+        business_id=bid,
+        name=f"{_name(r, used)} ({cfg['label']})",
+        archetype=archetype,
+        base_currency="INR",
+        payroll_day=int(r.choice(cfg["payroll_days"])),
         growth_rate=round(float(r.uniform(*cfg["growth"])), 3),
     )
 
@@ -176,7 +264,7 @@ def _gen_business(seed: int, idx: int, archetype: str, start: date, months: int)
     n_chronic = max(1, round(0.12 * n))
     n_seasonal = max(1, round(0.12 * n))
     n_prompt = max(1, round(0.15 * n))
-    types = (["chronic_late"] * n_chronic + ["seasonal_late"] * n_seasonal + ["prompt"] * n_prompt)
+    types = ["chronic_late"] * n_chronic + ["seasonal_late"] * n_seasonal + ["prompt"] * n_prompt
     types += ["typical"] * (n - len(types))
     types = [types[i] for i in rc.permutation(len(types))]
     custs: list[_Cust] = []
@@ -185,17 +273,25 @@ def _gen_business(seed: int, idx: int, archetype: str, start: date, months: int)
         onboard_idx = 0 if rc.random() < 0.75 else _uniform_int(rc, 1, max(1, min(9, months - 6)))
         cur = _choice_w(rc, cfg["cur_w"])
         rec = CustomerRec(
-            customer_id=f"C-{bid}-{i + 1:03d}", business_id=bid, name=_name(rc, used),
-            currency=cur, payment_terms_days=int(rc.choice([14, 30, 30, 45, 60])),
+            customer_id=f"C-{bid}-{i + 1:03d}",
+            business_id=bid,
+            name=_name(rc, used),
+            currency=cur,
+            payment_terms_days=int(rc.choice([14, 30, 30, 45, 60])),
             onboarded=mstarts[onboard_idx],
         )
-        custs.append(_Cust(
-            rec=rec, ctype=ctype, rate=float(rc.uniform(*cfg["rate"])),
-            median_amt=float(math.exp(rc.uniform(math.log(cfg["median"][0]), math.log(cfg["median"][1])))),
-            med_dpd=med * float(math.exp(rc.normal(0, 0.25))), sigma=sig * float(rc.uniform(0.85, 1.15)),
-            stretch=SEASONAL_STRETCHES[int(rc.integers(len(SEASONAL_STRETCHES)))],
-            onboard_idx=onboard_idx,
-        ))
+        custs.append(
+            _Cust(
+                rec=rec,
+                ctype=ctype,
+                rate=float(rc.uniform(*cfg["rate"])),
+                median_amt=float(math.exp(rc.uniform(math.log(cfg["median"][0]), math.log(cfg["median"][1])))),
+                med_dpd=med * float(math.exp(rc.normal(0, 0.25))),
+                sigma=sig * float(rc.uniform(0.85, 1.15)),
+                stretch=SEASONAL_STRETCHES[int(rc.integers(len(SEASONAL_STRETCHES)))],
+                onboard_idx=onboard_idx,
+            )
+        )
 
     # ---- invoices (latent outcome drawn at creation, in a fixed loop order)
     ri = rng_for(seed, "biz", bid, "invoices")
@@ -229,20 +325,47 @@ def _gen_business(seed: int, idx: int, archetype: str, start: date, months: int)
     for n_inv, (inv_date, c, due, cents, one_off, outcome, pay, dpd, paid_cents) in enumerate(pending, 1):
         iid = f"INV-{bid}-{n_inv:05d}"
         status = _status(outcome, pay, due, as_of)
-        invoices.append(InvoiceRec(
-            invoice_id=iid, business_id=bid, customer_id=c.rec.customer_id, invoice_date=inv_date,
-            due_date=due, currency=c.rec.currency, amount=cents_to_decimal(cents), status=status,
-            memo=("One-off project milestone" if one_off else "Services rendered" if archetype != "product_exporter" else "Goods shipped"),
-        ))
+        invoices.append(
+            InvoiceRec(
+                invoice_id=iid,
+                business_id=bid,
+                customer_id=c.rec.customer_id,
+                invoice_date=inv_date,
+                due_date=due,
+                currency=c.rec.currency,
+                amount=cents_to_decimal(cents),
+                status=status,
+                memo=(
+                    "One-off project milestone"
+                    if one_off
+                    else "Services rendered"
+                    if archetype != "product_exporter"
+                    else "Goods shipped"
+                ),
+            )
+        )
         if pay is not None and pay <= as_of and paid_cents:
-            payments.append(PaymentRec(
-                payment_id=f"PAY-{bid}-{len(payments) + 1:05d}", invoice_id=iid, business_id=bid,
-                pay_date=pay, currency=c.rec.currency, amount=cents_to_decimal(paid_cents),
-            ))
-        truth.append(GroundTruthRec(
-            invoice_id=iid, business_id=bid, customer_id=c.rec.customer_id, customer_type=c.ctype,
-            outcome=outcome, latent_pay_date=pay, days_past_due=dpd,
-        ))
+            payments.append(
+                PaymentRec(
+                    payment_id=f"PAY-{bid}-{len(payments) + 1:05d}",
+                    invoice_id=iid,
+                    business_id=bid,
+                    pay_date=pay,
+                    currency=c.rec.currency,
+                    amount=cents_to_decimal(paid_cents),
+                )
+            )
+        truth.append(
+            GroundTruthRec(
+                invoice_id=iid,
+                business_id=bid,
+                customer_id=c.rec.customer_id,
+                customer_type=c.ctype,
+                outcome=outcome,
+                latent_pay_date=pay,
+                days_past_due=dpd,
+            )
+        )
 
     cps, outs = _gen_outflows(seed, bid, cfg, biz, start, months, as_of, mstarts)
     return biz, [c.rec for c in custs], invoices, payments, truth, cps, outs
@@ -281,20 +404,28 @@ def _gen_outflows(seed, bid, cfg, biz, start, months, as_of, mstarts):
     r = rng_for(seed, "biz", bid, "outflows")
     cps: list[CounterpartyRec] = []
     outs: list[OutflowRec] = []
-    used: set[str] = set()
 
     def cp(kind: str, name: str, cur: str) -> str:
         cid = f"CP-{bid}-{len(cps) + 1:03d}"
-        cps.append(CounterpartyRec(counterparty_id=cid, business_id=bid, kind=kind, name=name,
-                                   currency=cur, added_date=start))
+        cps.append(
+            CounterpartyRec(counterparty_id=cid, business_id=bid, kind=kind, name=name, currency=cur, added_date=start)
+        )
         return cid
 
     def push(cid, kind, issue, due, pay, cur, cents):
-        outs.append(OutflowRec(
-            outflow_id=f"OUT-{bid}-{len(outs) + 1:05d}", business_id=bid, counterparty_id=cid,
-            kind=kind, issue_date=issue, due_date=due, pay_date=pay if pay <= as_of else None,
-            currency=cur, amount=cents_to_decimal(cents),
-        ))
+        outs.append(
+            OutflowRec(
+                outflow_id=f"OUT-{bid}-{len(outs) + 1:05d}",
+                business_id=bid,
+                counterparty_id=cid,
+                kind=kind,
+                issue_date=issue,
+                due_date=due,
+                pay_date=pay if pay <= as_of else None,
+                currency=cur,
+                amount=cents_to_decimal(cents),
+            )
+        )
 
     # payroll: INR, fixed day, 7% raise each April
     n_emp = _uniform_int(r, *cfg["n_emp"])
@@ -315,8 +446,7 @@ def _gen_outflows(seed, bid, cfg, biz, start, months, as_of, mstarts):
                 issue = roll_back(clamp_day(m0.year, m0.month, _uniform_int(r, 1, 28)))
                 due = issue + timedelta(days=30)
                 pay = roll_forward(due + timedelta(days=_uniform_int(r, 0, 4)))
-                push(sid, "supplier_invoice", issue, due, pay, cur,
-                     _cents(med * float(math.exp(r.normal(0, 0.35)))))
+                push(sid, "supplier_invoice", issue, due, pay, cur, _cents(med * float(math.exp(r.normal(0, 0.35)))))
 
     # SaaS: recurring card spend, charged on a fixed day
     for _ in range(_uniform_int(r, *cfg["n_saas"])):
@@ -365,8 +495,11 @@ def _write(rows: list[Rec], model: type[Rec], path: Path) -> str:
 
 # ------------------------------------------------------------------- driver ---
 def generate(
-    seed: int, out_dir: Path = Path("data"), start: date = date(2025, 1, 1),
-    months: int = 18, fx_source: str | None = None,
+    seed: int,
+    out_dir: Path = Path("data"),
+    start: date = date(2025, 1, 1),
+    months: int = 18,
+    fx_source: str | None = None,
 ) -> dict:
     as_of = window_end(start, months)
     syn_dir = out_dir / "synthetic"
@@ -387,8 +520,12 @@ def generate(
 
     fx = load_fx(start - timedelta(days=366), as_of, seed=seed, data_dir=out_dir, source=fx_source)
     manifest = {
-        "generator_version": __version__, "seed": seed, "start": str(start), "months": months,
-        "as_of": str(as_of), "fx_source": fx.source,
+        "generator_version": __version__,
+        "seed": seed,
+        "start": str(start),
+        "months": months,
+        "as_of": str(as_of),
+        "fx_source": fx.source,
         "rows": {k: len(v[0]) for k, v in tables.items()},
         "sha256": hashes,
         "note": "ground_truth.parquet holds latent labels for evaluation only; never use as features.",
@@ -398,14 +535,19 @@ def generate(
 
 
 def main(argv: list[str] | None = None) -> int:
-    p = argparse.ArgumentParser(prog="python -m tessera_evalkit.generate",
-                                description="Generate deterministic synthetic SME data + FX history.")
+    p = argparse.ArgumentParser(
+        prog="python -m tessera_evalkit.generate", description="Generate deterministic synthetic SME data + FX history."
+    )
     p.add_argument("--seed", type=int, required=True)
     p.add_argument("--out", type=Path, default=Path("data"), help="data root (default: ./data)")
     p.add_argument("--start", type=date.fromisoformat, default=date(2025, 1, 1))
     p.add_argument("--months", type=int, default=18)
-    p.add_argument("--fx-source", choices=["auto", "ecb", "synthetic"], default=None,
-                   help="overrides TESSERA_FX_SOURCE (default auto)")
+    p.add_argument(
+        "--fx-source",
+        choices=["auto", "ecb", "synthetic"],
+        default=None,
+        help="overrides TESSERA_FX_SOURCE (default auto)",
+    )
     a = p.parse_args(argv)
     logging.basicConfig(level=logging.INFO, format="%(levelname)s %(message)s")
     m = generate(a.seed, a.out, a.start, a.months, a.fx_source)

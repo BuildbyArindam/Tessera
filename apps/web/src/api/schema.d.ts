@@ -783,7 +783,7 @@ export interface components {
         };
         /**
          * SimulationOut
-         * @description What the simulator told policy about this proposal. All money is in the sell currency; the loss is never negative.
+         * @description What the simulator told policy about this proposal. Money is in the sell currency; the loss is never negative.
          */
         SimulationOut: {
             amount: components["schemas"]["Money-Output"];

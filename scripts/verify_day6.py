@@ -49,7 +49,9 @@ print(f"ruleset: {[r.rule_id for r in rs.rules]}  hash={rs.hash}\n")
 
 # (a) kill switch on => every proposal BLOCK
 verdicts = {a: evaluate(proposal(a), ctx(kill=True), rs).verdict for a in ActionType}
-check("(a) kill switch blocks every action type", all(v is Verdict.BLOCK for v in verdicts.values()), str(len(verdicts)))
+check(
+    "(a) kill switch blocks every action type", all(v is Verdict.BLOCK for v in verdicts.values()), str(len(verdicts))
+)
 
 # (b) just under cap APPROVE, at cap APPROVE, just over BLOCK
 under, at, over = (evaluate(proposal(amount=a), ctx(), rs).verdict for a in ("4999.99", "5000.00", "5000.01"))
@@ -62,11 +64,19 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "tests/unit"))
 from policy_helpers import ruleset_with  # noqa: E402
 
 d = evaluate(proposal(), ctx(), ruleset_with("test_boom"))
-check("(c) raising rule => BLOCK policy_error", d.verdict is Verdict.BLOCK and d.reasons[0] == POLICY_ERROR, str(d.reasons))
+check(
+    "(c) raising rule => BLOCK policy_error",
+    d.verdict is Verdict.BLOCK and d.reasons[0] == POLICY_ERROR,
+    str(d.reasons),
+)
 
 # (d) missing context => BLOCK
 d = evaluate(proposal(), ctx(kill=None), rs)
-check("(d) missing kill-switch state => BLOCK policy_error", d.verdict is Verdict.BLOCK and d.reasons[0] == POLICY_ERROR, str(d.reasons))
+check(
+    "(d) missing kill-switch state => BLOCK policy_error",
+    d.verdict is Verdict.BLOCK and d.reasons[0] == POLICY_ERROR,
+    str(d.reasons),
+)
 d = evaluate(proposal(), ctx(), ruleset_with("test_needs_balances"))
 check("(d) rule needing absent balances => BLOCK policy_error", d.verdict is Verdict.BLOCK and d.reasons[0] == POLICY_ERROR)  # fmt: skip
 
@@ -83,7 +93,9 @@ base = ruleset_from_yaml_texts({"kill_switch.yaml": kill_yaml, "max_amount_per_a
 edited = ruleset_from_yaml_texts(
     {"kill_switch.yaml": kill_yaml, "max_amount_per_action.yaml": cap_yaml.replace('"5000.00"', '"5000.01"', 1)}
 ).hash
-check("(f) editing one YAML value changes the hash", base == rs.hash and edited != base, f"{base[:12]} -> {edited[:12]}")
+check(
+    "(f) editing one YAML value changes the hash", base == rs.hash and edited != base, f"{base[:12]} -> {edited[:12]}"
+)
 
 # Purity: AST scan of the policy package for forbidden imports and eval/exec
 bad_imports: list[str] = []
@@ -99,7 +111,11 @@ for path in sorted(POLICY_DIR.rglob("*.py")):
         if isinstance(node, ast.Call) and isinstance(node.func, ast.Name) and node.func.id in FORBIDDEN_CALLS:
             bad_calls.append(f"{path.name}:{node.lineno} {node.func.id}()")
 n_files = len(list(POLICY_DIR.rglob("*.py")))
-check(f"no network/db/LLM/agent/airwallex imports in policy ({n_files} files scanned)", not bad_imports, "; ".join(bad_imports))
+check(
+    f"no network/db/LLM/agent/airwallex imports in policy ({n_files} files scanned)",
+    not bad_imports,
+    "; ".join(bad_imports),
+)
 check("no eval/exec/compile/__import__ calls in policy", not bad_calls, "; ".join(bad_calls))
 
 print(f"\n{'ALL CHECKS PASSED' if not failures else f'{failures} CHECK(S) FAILED'}")

@@ -12,15 +12,25 @@ Calibration rows never overlap train or test rows (see tessera_core.forecast.spl
 from __future__ import annotations
 
 import argparse
+from collections.abc import Callable, Mapping, Sequence
 from pathlib import Path
 
+import numpy as np
 import pandas as pd
+from numpy.typing import NDArray
+from tessera_core.forecast import DirectForecaster, make_split, rolling_test_windows, target_col
 from tessera_core.forecast.backtest import DEFAULT_HORIZONS, rolling_origin_backtest
 from tessera_core.forecast.baselines import BASELINES
 from tessera_core.forecast.history import History
 
+from tessera_evalkit.interval_metrics import (
+    coverage,
+    interval_pinball,
+    mean_width,
+    wape,
+)
 from tessera_evalkit.loading import load_history
-from tessera_evalkit.metrics import bias, mae, smape, wape
+from tessera_evalkit.metrics import bias, mae, smape
 
 
 def summarize(results: pd.DataFrame, by: list[str]) -> pd.DataFrame:
@@ -28,9 +38,7 @@ def summarize(results: pd.DataFrame, by: list[str]) -> pd.DataFrame:
 
     def agg(g: pd.DataFrame) -> pd.Series:
         y, p = g["y_true"], g["y_pred"]
-        return pd.Series(
-            {"wape": wape(y, p), "smape": smape(y, p), "mae": mae(y, p), "bias": bias(y, p), "n": len(g)}
-        )
+        return pd.Series({"wape": wape(y, p), "smape": smape(y, p), "mae": mae(y, p), "bias": bias(y, p), "n": len(g)})
 
     return results.groupby(by, sort=True).apply(agg, include_groups=False).reset_index()
 
@@ -51,7 +59,9 @@ def main() -> None:
     ap.add_argument("--step-weeks", type=int, default=4)
     args = ap.parse_args()
 
-    raw, summary = run_baseline_eval(load_history(args.data), min_train_weeks=args.min_train_weeks, step_weeks=args.step_weeks)
+    raw, summary = run_baseline_eval(
+        load_history(args.data), min_train_weeks=args.min_train_weeks, step_weeks=args.step_weeks
+    )
     out = Path(args.out)
     out.parent.mkdir(parents=True, exist_ok=True)
     summary.to_csv(out, index=False)
@@ -59,22 +69,6 @@ def main() -> None:
     print(summary.to_string(index=False))
     print(f"\nwrote {out} and {out.stem}_raw.csv")
 
-
-if __name__ == "__main__":
-    main()
-
-from collections.abc import Callable, Mapping, Sequence
-
-import numpy as np
-from numpy.typing import NDArray
-from tessera_core.forecast import DirectForecaster, make_split, rolling_test_windows, target_col
-
-from tessera_evalkit.interval_metrics import (
-    coverage,
-    interval_pinball,
-    mean_width,
-    wape,
-)
 
 FloatArray = NDArray[np.float64]
 Baseline = Callable[[pd.DataFrame, int], FloatArray]
@@ -153,3 +147,7 @@ def summarise(rows: pd.DataFrame, baseline_names: Sequence[str], coverage_target
             )
             out.append(rec)
     return pd.DataFrame(out)
+
+
+if __name__ == "__main__":
+    main()
