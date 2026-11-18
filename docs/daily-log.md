@@ -486,3 +486,8 @@ independent re-scoring of forecast cells, hand rebuild of every acted obligation
 - Local run: `make test` 1228 passed, 18 skipped; `make test-integration` 219 passed; demo, red-team drift check and `make web-check` pass. README and allowlist updated to 1228.
 - Assumptions: threat-model residual risks follow the Day 18 report; no license added (the owner's choice); the demo script's timings are estimates, not rehearsed.
 - Not verified: the CI workflow itself (no actionlint, never run on GitHub); the Docker Compose path.
+
+## Public demo (after Day 20)
+- Added `scripts/serve_public_demo.py`, `render.yaml` and `DemoStack(database_url=...)` so the mock-adapter demo can run as one free web process on Render with a free Neon database. It WIPES the database in `DATABASE_URL` on every start (a restart resets the demo).
+- Assumptions: the planner is still the scripted stand-in; a stand-in vendor thread confirms submitted payouts through the signed webhook endpoint; the clock stays frozen at 2026-03-02. The known gap (a settled payable is not marked paid) shows up as one extra BLOCKED conversion, stopped by `currency_concentration_cap`.
+- Not run: a real Render or Neon deployment (no account access from the build session), so free-tier memory limits are unverified.

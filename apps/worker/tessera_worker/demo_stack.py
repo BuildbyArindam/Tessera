@@ -98,6 +98,21 @@ def fresh_database(admin_url: str, name: str | None = None) -> str:
     return url
 
 
+def reset_database(url: str) -> str:
+    """Empty an EXISTING database (drop the public schema) and migrate it. For hosted free databases where the role
+    cannot CREATE DATABASE (PUBLIC_DEMO only: this destroys everything in `url`)."""
+    engine = sa.create_engine(url, isolation_level="AUTOCOMMIT", poolclass=sa.pool.NullPool)
+    with engine.connect() as conn:
+        conn.execute(sa.text("DROP SCHEMA IF EXISTS public CASCADE"))
+        conn.execute(sa.text("CREATE SCHEMA public"))
+    engine.dispose()
+    cfg = Config(str(ROOT / "alembic.ini"))
+    cfg.set_main_option("script_location", str(ROOT / "migrations"))
+    cfg.attributes["url"] = url
+    command.upgrade(cfg, "head")
+    return url
+
+
 class DemoDirectory:
     """Tessera beneficiary id -> the vendor's id, filled when the beneficiaries are registered with the mock."""
 
@@ -166,8 +181,17 @@ class DemoWorld:
 
 
 class DemoStack:
-    def __init__(self, admin_url: str, *, db_name: str | None = None, api_key: str = API_KEY) -> None:
-        self.url = fresh_database(admin_url, db_name)
+    def __init__(
+        self, admin_url: str | None = None, *, db_name: str | None = None, api_key: str = API_KEY,
+        database_url: str | None = None,
+    ) -> None:  # fmt: skip
+        """`admin_url`: create a fresh database on that server. `database_url`: wipe and reuse that one database."""
+        if database_url is not None:
+            self.url = reset_database(database_url)
+        elif admin_url is not None:
+            self.url = fresh_database(admin_url, db_name)
+        else:
+            raise ValueError("give admin_url (create a database) or database_url (reuse one)")
         self.engine = make_engine(self.url)
         self.factory = make_session_factory(self.engine)
         self.port = MockAirwallex(OPENING, spread_bps=0, usd_values=MOCK_USD_VALUES)

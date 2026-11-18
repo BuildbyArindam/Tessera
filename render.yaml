@@ -1,0 +1,21 @@
+# Render Blueprint for the PUBLIC DEMO API (mock Airwallex, synthetic data). Free plan; spins down when idle.
+# The database is NOT created here: use a free Neon Postgres (Render's free Postgres expires after 30 days).
+services:
+  - type: web
+    name: tessera-api
+    runtime: python
+    plan: free
+    buildCommand: >-
+      pip install -e packages/core -e packages/airwallex -e packages/agent -e packages/store -e packages/audit
+      -e packages/evalkit -e apps/api -e apps/worker
+    startCommand: python scripts/serve_public_demo.py
+    healthCheckPath: /docs
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.11.9
+      - key: TESSERA_AIRWALLEX_ADAPTER
+        value: mock
+      - key: DATABASE_URL # your Neon connection string; the demo WIPES this database on every start
+        sync: false
+      - key: TESSERA_API_KEY # 16+ characters; use the same value in Vercel
+        sync: false
