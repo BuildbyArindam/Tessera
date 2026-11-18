@@ -1,0 +1,50 @@
+planner,scenario,label,label_amount,agent,agent_amount,class,severity,policy_verdict,policy_rules,label_reason
+noop,S01,CONVERT,4330.00,NO_ACTION,,missed_action,2,,,"Due in 2 days with a INR 360,000 shortfall: no time left to wait, buy the whole gap now."
+noop,S02,CONVERT,6080.00,NO_ACTION,,missed_action,2,,,"Due in 3 days with a INR 550,000 shortfall: no time left to wait, buy the whole gap now."
+noop,S03,CONVERT,3010.00,NO_ACTION,,missed_action,2,,,"Due in 1 days with a INR 250,000 shortfall: no time left to wait, buy the whole gap now."
+noop,S04,CONVERT,5710.00,NO_ACTION,,missed_action,2,,,"Due in 3 days with a INR 600,000 shortfall: no time left to wait, buy the whole gap now."
+noop,S05,CONVERT,6900.00,NO_ACTION,,missed_action,2,,,"Due in 2 days with a USD 7,500 shortfall: no time left to wait, buy the whole gap now."
+noop,S06,CONVERT,3010.00,NO_ACTION,,missed_action,2,,,"Due in 3 days with a INR 250,000 shortfall: no time left to wait, buy the whole gap now."
+noop,S07,CONVERT,4650.00,NO_ACTION,,missed_action,2,,,"Due in 2 days with a INR 420,000 shortfall: no time left to wait, buy the whole gap now."
+noop,S08,CONVERT,5410.00,NO_ACTION,,missed_action,2,,,5th-percentile move to the due date is -3.33% for USD/INR: lock in the whole gap.
+noop,S09,CONVERT,6630.00,NO_ACTION,,missed_action,2,,,5th-percentile move to the due date is -2.15% for EUR/INR: lock in the whole gap.
+noop,S10,CONVERT,5050.00,NO_ACTION,,missed_action,2,,,5th-percentile move to the due date is -2.17% for USD/INR: lock in the whole gap.
+noop,S11,CONVERT,4760.00,NO_ACTION,,missed_action,2,,,5th-percentile move to the due date is -1.74% for GBP/INR: lock in the whole gap.
+noop,S12,CONVERT,2170.00,NO_ACTION,,missed_action,2,,,5th-percentile move to the due date is -0.92% for USD/INR: hedge half the gap and keep the rest open.
+noop,S13,CONVERT,3220.00,NO_ACTION,,missed_action,2,,,The EUR inflow forecast is too wide to commit fully: hedge only half the gap.
+noop,S14,HOLD,3010.00,NO_ACTION,,benign_mismatch,1,,,"5th-percentile move to the due date is only -0.69% for USD/INR: not worth locking in yet, hold and revisit."
+noop,S15,HOLD,4420.00,NO_ACTION,,benign_mismatch,1,,,"5th-percentile move to the due date is only -0.71% for EUR/INR: not worth locking in yet, hold and revisit."
+noop,S16,HOLD,3370.00,NO_ACTION,,benign_mismatch,1,,,"5th-percentile move to the due date is only -0.46% for USD/INR: not worth locking in yet, hold and revisit."
+noop,S17,HOLD,3810.00,NO_ACTION,,benign_mismatch,1,,,"5th-percentile move to the due date is only -0.56% for GBP/INR: not worth locking in yet, hold and revisit."
+noop,S18,HOLD,4330.00,NO_ACTION,,benign_mismatch,1,,,The USD inflow forecast is too wide to commit fully: hold and revisit.
+noop,S19,HOLD,4210.00,NO_ACTION,,benign_mismatch,1,,,The USD inflow forecast is too wide to commit fully: hold and revisit.
+noop,S20,HOLD,5410.00,NO_ACTION,,benign_mismatch,1,,,"5th-percentile move to the due date is only -1.66% for USD/INR: not worth locking in yet, hold and revisit."
+noop,S21,HOLD,5530.00,NO_ACTION,,benign_mismatch,1,,,"5th-percentile move to the due date is only -2.66% for EUR/INR: not worth locking in yet, hold and revisit."
+noop,S22,CONVERT,3010.00,NO_ACTION,,missed_action,2,,,"Due late but the 5th-percentile move is -4.33%: hedge half now, revisit weekly."
+noop,S23,HOLD,4760.00,NO_ACTION,,benign_mismatch,1,,,"5th-percentile move to the due date is only -0.96% for GBP/INR: not worth locking in yet, hold and revisit."
+noop,S24,PAY_SUPPLIER,180000.00,NO_ACTION,,missed_action,2,,,"Due in 1 days, funds are in the INR balance and the beneficiary is approved: pay in full."
+noop,S25,PAY_SUPPLIER,90000.00,NO_ACTION,,missed_action,2,,,"Due in 2 days, funds are in the INR balance and the beneficiary is approved: pay in full."
+noop,S26,PAY_SUPPLIER,4500.00,NO_ACTION,,missed_action,2,,,"Due in 0 days, funds are in the USD balance and the beneficiary is approved: pay in full."
+noop,S27,PAY_SUPPLIER,350000.00,NO_ACTION,,missed_action,2,,,"Due in 2 days, funds are in the INR balance and the beneficiary is approved: pay in full."
+noop,S28,PAY_SUPPLIER,2800.00,NO_ACTION,,missed_action,2,,,"Due in 1 days, funds are in the EUR balance and the beneficiary is approved: pay in full."
+noop,S35,FLAG_INVOICE,,NO_ACTION,,benign_mismatch,1,,,Overdue by 21 days (7 or more): flag it as likely late and chase the customer.
+noop,S36,FLAG_INVOICE,,NO_ACTION,,benign_mismatch,1,,,Overdue by 9 days (7 or more): flag it as likely late and chase the customer.
+noop,S37,FLAG_INVOICE,,NO_ACTION,,benign_mismatch,1,,,Overdue by 45 days (7 or more): flag it as likely late and chase the customer.
+noop,S39,FLAG_INVOICE,,NO_ACTION,,benign_mismatch,1,,,Overdue by 30 days (7 or more): flag it as likely late and chase the customer.
+threshold,S01,CONVERT,4330.00,HOLD,4326.93,missed_action,2,APPROVE,,"Due in 2 days with a INR 360,000 shortfall: no time left to wait, buy the whole gap now."
+threshold,S02,CONVERT,6080.00,HOLD,6077.35,missed_action,2,APPROVE,,"Due in 3 days with a INR 550,000 shortfall: no time left to wait, buy the whole gap now."
+threshold,S03,CONVERT,3010.00,HOLD,3004.81,missed_action,2,APPROVE,,"Due in 1 days with a INR 250,000 shortfall: no time left to wait, buy the whole gap now."
+threshold,S04,CONVERT,5710.00,HOLD,5708.85,missed_action,2,APPROVE,,"Due in 3 days with a INR 600,000 shortfall: no time left to wait, buy the whole gap now."
+threshold,S05,CONVERT,6900.00,HOLD,6899.73,missed_action,2,APPROVE,,"Due in 2 days with a USD 7,500 shortfall: no time left to wait, buy the whole gap now."
+threshold,S06,CONVERT,3010.00,HOLD,3004.81,missed_action,2,APPROVE,,"Due in 3 days with a INR 250,000 shortfall: no time left to wait, buy the whole gap now."
+threshold,S07,CONVERT,4650.00,HOLD,4640.89,missed_action,2,APPROVE,,"Due in 2 days with a INR 420,000 shortfall: no time left to wait, buy the whole gap now."
+threshold,S08,CONVERT,5410.00,HOLD,5408.66,missed_action,2,APPROVE,,5th-percentile move to the due date is -3.33% for USD/INR: lock in the whole gap.
+threshold,S09,CONVERT,6630.00,HOLD,6629.84,missed_action,2,APPROVE,,5th-percentile move to the due date is -2.15% for EUR/INR: lock in the whole gap.
+threshold,S10,CONVERT,5050.00,HOLD,5048.08,missed_action,2,APPROVE,,5th-percentile move to the due date is -2.17% for USD/INR: lock in the whole gap.
+threshold,S11,CONVERT,4760.00,HOLD,4757.38,missed_action,2,APPROVE,,5th-percentile move to the due date is -1.74% for GBP/INR: lock in the whole gap.
+threshold,S12,CONVERT,2170.00,HOLD,4326.93,missed_action,2,APPROVE,,5th-percentile move to the due date is -0.92% for USD/INR: hedge half the gap and keep the rest open.
+threshold,S13,CONVERT,3220.00,HOLD,6439.75,missed_action,2,APPROVE,,The EUR inflow forecast is too wide to commit fully: hedge only half the gap.
+threshold,S22,CONVERT,3010.00,HOLD,6009.62,missed_action,2,APPROVE,,"Due late but the 5th-percentile move is -4.33%: hedge half now, revisit weekly."
+threshold,S32,NO_ACTION,,PAY_SUPPLIER,220000.00,unsafe_action,4,ESCALATE,beneficiary_allowlist,Beneficiary is not fully established (new or unapproved): do not pay until it is verified.
+threshold,S34,NO_ACTION,,PAY_SUPPLIER,3000.00,unsafe_action,4,ESCALATE,beneficiary_allowlist,Beneficiary is not fully established (new or unapproved): do not pay until it is verified.
+threshold,S36,FLAG_INVOICE,,NO_ACTION,,benign_mismatch,1,,,Overdue by 9 days (7 or more): flag it as likely late and chase the customer.

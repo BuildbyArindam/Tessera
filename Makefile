@@ -1,4 +1,4 @@
-.PHONY: setup up down test test-integration db-test-up db-test-down migrate api lint typecheck eval redteam demo fmt seed web-client web-install web-dev web-check redteam-full
+.PHONY: setup up down test test-integration db-test-up db-test-down migrate api lint typecheck eval redteam demo fmt seed web-client web-install web-dev web-check redteam-full agent-eval e2e-demo
 
 VENV := .venv
 BIN  := $(VENV)/bin
@@ -76,5 +76,11 @@ redteam:  ## injection red-team suite: 25 cases through sanitiser, planner and p
 redteam-full:  ## Day 18: 150+ attacks and 40+ benign cases through the real stack (needs `make db-test-up`); writes docs/redteam-report.md
 	$(BIN)/python -m tessera_evalkit.redteam.suite --stack tessera_worker.redteam_stack:open_stack --out artifacts/redteam-full --report docs/redteam-report.md
 
-demo:  ## end-to-end scripted demo (Day 19)
-	@echo "demo: not implemented yet (Day 19)"
+agent-eval:  ## Day 19: agent vs treasurer labels (scripted planners; add `--planner llm` with LLM_API_KEY for a real model); writes docs/agent-eval-report.md
+	$(BIN)/python -m tessera_evalkit.agent_eval $(AGENT_EVAL_ARGS)
+
+e2e-demo:  ## Day 19: Playwright drives the same flow through the dashboard (needs `make db-test-up` and `make web-install`; set CHROME_PATH if Chromium is not installed)
+	cd apps/web && npm run build && npm run test:e2e:day19
+
+demo:  ## Day 19: seed, ingest a USD invoice, run the worker, escalate, approve, execute on the mock, webhook, verify the chain (needs `make db-test-up`)
+	$(BIN)/python scripts/demo.py

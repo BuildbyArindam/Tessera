@@ -14,6 +14,12 @@ extend-immutable-calls = ["fastapi.Depends", "fastapi.Query", "fastapi.Path", "f
 
 [tool.ruff.lint.per-file-ignores]
 "migrations/versions/*" = ["E501"]  # generated constraint text
+# Day 19: files whose lines are mostly report/transcript prose in string literals (ruff format cannot wrap those)
+"packages/evalkit/tessera_evalkit/agent_eval/*" = ["E501"]
+"apps/worker/tessera_worker/demo_stack.py" = ["E501"]
+"scripts/demo.py" = ["E501"]
+"scripts/build_scenarios.py" = ["E501"]
+"scripts/serve_day19_demo.py" = ["E501"]
 
 [tool.mypy]
 python_version = "3.11"

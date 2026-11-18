@@ -9,6 +9,7 @@
     "lint": "next lint",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
+    "test:e2e:day19": "playwright test -c playwright.day19.config.ts",
     "gen:api": "openapi-typescript openapi.json -o src/api/schema.d.ts"
   },
   "dependencies": {

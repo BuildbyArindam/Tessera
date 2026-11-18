@@ -16,6 +16,7 @@ const PY = process.env.PYTHON ?? "../../.venv/bin/python";
 
 export default defineConfig({
   testDir: "e2e",
+  testIgnore: "19-*.spec.ts", // the Day 19 flow has its own config, ports and database
   timeout: 90_000,
   expect: { timeout: 8_000 },
   fullyParallel: false,
